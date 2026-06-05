@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>AURUM Signals · Live Trading Room</title>
+<title>Aurum Analysis · ห้องบทวิเคราะห์สด</title>
 <meta name="theme-color" content="#0a0a0b">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 tailwind.config = {
   theme: {
@@ -51,10 +52,238 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
 .scroll-y::-webkit-scrollbar-track { background: transparent; }
 .fade-in { animation: fadeIn 0.4s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---- Access gate screens (login / no-subscription) ---- */
+.gate-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.gate-card { width: 100%; max-width: 380px; background: #13131a; border: 1px solid #252531; border-radius: 20px; padding: 32px 26px; text-align: center; }
+.gate-logo { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 22px; color: #d4af37; }
+.gate-logo svg { width: 26px; height: 26px; }
+.gate-logo span { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.18em; font-size: 13px; font-weight: 600; color: #e8e8ed; }
+.gate-card h1 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #e8e8ed; }
+.gate-card p { font-size: 13px; color: #9ca3af; margin-bottom: 18px; line-height: 1.6; }
+.gate-card input { width: 100%; background: #1a1a23; border: 1px solid #252531; border-radius: 10px; padding: 12px 14px; color: #e8e8ed; font-size: 14px; margin-bottom: 12px; outline: none; box-sizing: border-box; }
+.gate-card input:focus { border-color: #8b7029; }
+.gate-btn { display: block; width: 100%; background: #d4af37; color: #0a0a0b; font-weight: 600; font-size: 14px; padding: 12px; border: none; border-radius: 10px; cursor: pointer; transition: background 0.15s; text-decoration: none; }
+.gate-btn:hover { background: #e7c66e; }
+.gate-btn:disabled { opacity: 0.6; cursor: default; }
+.gate-foot { margin: 16px 0 0; font-size: 12px; color: #6b7280; }
+.gate-foot a { color: #e7c66e; text-decoration: underline; }
+.gate-error { color: #f23645; font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+
+/* ---- Not-subscribed notification screen (wider than the basic gate card) ---- */
+.nosub-card { width: 100%; max-width: 620px; background: #0a0a0b; border: 1px solid #252531; border-radius: 22px; padding: 34px 28px; text-align: center; }
+.nosub-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(242, 54, 69, 0.08); border: 1px solid rgba(242, 54, 69, 0.3); color: #f5cd52; font-size: 11px; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px; letter-spacing: 0.02em; }
+.nosub-dot { width: 7px; height: 7px; border-radius: 999px; background: #f23645; box-shadow: 0 0 8px rgba(242, 54, 69, 0.8); animation: pulse 1.5s infinite; }
+.nosub-title { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 26px; line-height: 1.3; font-weight: 700; margin: 0 0 10px; background: linear-gradient(135deg, #f5cd52, #d4af37); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.nosub-user { font-size: 12px; color: #6b7280; margin: 0 0 22px; }
+.nosub-email { color: #9ca3af; font-weight: 500; }
+.nosub-user a { color: #e7c66e; text-decoration: underline; margin-left: 8px; }
+.nosub-steps { display: flex; gap: 12px; margin-bottom: 24px; text-align: left; }
+.nosub-step { flex: 1; background: #13131a; border: 1px solid #8b7029; border-radius: 14px; padding: 16px 14px; position: relative; }
+.nosub-step-num { position: absolute; top: -10px; left: 14px; width: 22px; height: 22px; border-radius: 999px; background: #d4af37; color: #0a0a0b; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.nosub-step-emoji { font-size: 22px; margin: 6px 0 8px; }
+.nosub-step-title { font-size: 13px; font-weight: 600; color: #e8e8ed; margin: 0 0 6px; }
+.nosub-step-desc { font-size: 11px; color: #9ca3af; line-height: 1.6; margin: 0; }
+.nosub-cta { display: block; width: 100%; box-sizing: border-box; background: linear-gradient(135deg, #f5cd52, #d4af37); color: #0a0a0b; font-weight: 700; font-size: 15px; padding: 14px; border: none; border-radius: 12px; cursor: pointer; text-decoration: none; box-shadow: 0 0 24px rgba(212, 175, 55, 0.35); transition: box-shadow 0.2s, transform 0.2s; }
+.nosub-cta:hover { box-shadow: 0 0 34px rgba(212, 175, 55, 0.55); transform: translateY(-1px); }
+.nosub-teaser { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 12px; color: #8b7029; margin: 14px 0 0; }
+@media (max-width: 480px) {
+  .nosub-steps { flex-direction: column; }
+  .nosub-title { font-size: 22px; }
+}
 </style>
 </head>
 
 <body class="text-t1 font-sans antialiased min-h-screen">
+
+<!-- =====================================================================
+     Access gate (Option A) — runs before the room renders.
+       1. Reads the aurum-crm session from this origin's localStorage.
+       2. No session  -> inline login overlay (aurum-crm Supabase Auth).
+       3. Has session -> POST wallet-subscriptions with the aurum-crm
+          bearer; require an ACTIVE, non-expired `aurum_analysis` row.
+       4. No active sub -> "subscribe first" screen linking to aurumlive.
+     Fail-closed: any unexpected error keeps the room hidden.
+     ===================================================================== -->
+<script>
+(function () {
+  const AURUM_CRM_URL  = 'https://jdelizsmiwpushoeafen.supabase.co';
+  // aurum-crm anon (publishable) key — public by design, mirrors aurumlive.com.
+  const AURUM_CRM_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkZWxpenNtaXdwdXNob2VhZmVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MjcwNjYsImV4cCI6MjA5MjUwMzA2Nn0.JEZuqZgqdou5YD7zWbV65O7IJrbM9dy79KgP3kpK97c';
+  const CUSTOMERS_FN_URL = 'https://etwlurpjrqlvrxgsbhkd.supabase.co/functions/v1/wallet-subscriptions';
+  const PACKAGE_URL = 'https://aurumlive.com/package';
+
+  // Hide the whole document until the gate makes a decision (fail-closed).
+  document.documentElement.style.visibility = 'hidden';
+  function reveal() { document.documentElement.style.visibility = ''; }
+
+  if (!window.supabase || !window.supabase.createClient) {
+    // Auth library failed to load — do not leak the room.
+    document.addEventListener('DOMContentLoaded', function () {
+      showError('ไม่สามารถโหลดระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง');
+    });
+    return;
+  }
+
+  const sb = window.supabase.createClient(AURUM_CRM_URL, AURUM_CRM_ANON, {
+    auth: { storageKey: 'sb-jdelizsmiwpushoeafen-auth-token', persistSession: true, autoRefreshToken: true }
+  });
+  window.__aurumSb = sb;
+
+  async function hasActiveAnalysis(session) {
+    const res = await fetch(CUSTOMERS_FN_URL, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + session.access_token }
+    });
+    if (!res.ok) return false;
+    const body = await res.json().catch(function () { return {}; });
+    const subs = body.subscriptions || [];
+    return subs.some(function (s) {
+      return s.product_type === 'aurum_analysis'
+        && s.status === 'active'
+        && s.expires_at && new Date(s.expires_at) > new Date();
+    });
+  }
+
+  async function runGate() {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { showLoginOverlay(); return; }
+
+      const ok = await hasActiveAnalysis(session);
+      if (!ok) { showNoSubscriptionScreen(session.user && session.user.email); return; }
+
+      // Passed — reveal the room and watch for mid-session expiry.
+      reveal();
+      window.__AURUM_GATE_PASSED = true;
+      setInterval(recheck, 5 * 60 * 1000);
+    } catch (e) {
+      showError('ไม่สามารถตรวจสอบสิทธิ์การใช้งานได้ กรุณาลองใหม่อีกครั้ง');
+    }
+  }
+
+  // Re-check every 5 min; soft-kick if the subscription has lapsed.
+  async function recheck() {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { showNoSubscriptionScreen(); return; }
+      const ok = await hasActiveAnalysis(session);
+      if (!ok) showNoSubscriptionScreen(session.user && session.user.email);
+    } catch (e) { /* transient — keep current state, try again next tick */ }
+  }
+
+  function gateShell(inner) {
+    return '<div class="gate-wrap"><div class="gate-card">'
+      + '<div class="gate-logo">'
+      + '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/></svg>'
+      + '<span>AURUM ANALYSIS</span></div>'
+      + inner + '</div></div>';
+  }
+
+  function showError(msg) {
+    document.body.innerHTML = gateShell(
+      '<h1>เกิดข้อผิดพลาด</h1>'
+      + '<p>' + msg + '</p>'
+      + '<button class="gate-btn" onclick="location.reload()">ลองใหม่</button>'
+    );
+    reveal();
+  }
+
+  function showLoginOverlay() {
+    document.body.innerHTML = gateShell(
+      '<h1>เข้าสู่ระบบ</h1>'
+      + '<p>เข้าสู่ระบบเพื่อใช้งานห้องบทวิเคราะห์ Aurum Analysis</p>'
+      + '<input id="gate-email" type="email" placeholder="อีเมล" autocomplete="email" />'
+      + '<input id="gate-password" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" />'
+      + '<p id="gate-error" class="gate-error"></p>'
+      + '<button id="gate-submit" class="gate-btn">เข้าสู่ระบบ</button>'
+      + '<p class="gate-foot">ยังไม่เป็นสมาชิก? <a href="' + PACKAGE_URL + '">สมัคร Aurum Analysis</a></p>'
+    );
+    reveal();
+    const submit = document.getElementById('gate-submit');
+    const err = document.getElementById('gate-error');
+    async function doLogin() {
+      const email = document.getElementById('gate-email').value.trim();
+      const password = document.getElementById('gate-password').value;
+      if (!email || !password) { err.textContent = 'กรุณากรอกอีเมลและรหัสผ่าน'; return; }
+      submit.disabled = true; submit.textContent = 'กำลังเข้าสู่ระบบ...'; err.textContent = '';
+      const { error } = await sb.auth.signInWithPassword({ email: email, password: password });
+      if (error) {
+        err.textContent = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+        submit.disabled = false; submit.textContent = 'เข้าสู่ระบบ';
+        return;
+      }
+      location.reload();
+    }
+    submit.addEventListener('click', doLogin);
+    document.getElementById('gate-password').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') doLogin();
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function gateLogout(e) {
+    if (e) e.preventDefault();
+    await sb.auth.signOut();
+    location.reload();
+  }
+
+  function showNoSubscriptionScreen(userEmail) {
+    const userLine = userEmail
+      ? '<p class="nosub-user">เข้าสู่ระบบในชื่อ: '
+          + '<span class="nosub-email">' + escapeHtml(userEmail) + '</span>'
+          + '<a href="#" id="nosub-logout">ออกจากระบบ</a></p>'
+      : '';
+
+    const steps =
+      '<div class="nosub-steps">'
+      + '<div class="nosub-step"><div class="nosub-step-num">1</div>'
+        + '<div class="nosub-step-emoji">💰</div>'
+        + '<p class="nosub-step-title">Subscribe</p>'
+        + '<p class="nosub-step-desc">เลือกแพ็คเกจที่ aurumlive.com/package<br>$20/สัปดาห์ หรือ $60/เดือน</p></div>'
+      + '<div class="nosub-step"><div class="nosub-step-num">2</div>'
+        + '<div class="nosub-step-emoji">✅</div>'
+        + '<p class="nosub-step-title">Auto-Activate</p>'
+        + '<p class="nosub-step-desc">ระบบเปิดสิทธิ์ทันทีหลังชำระเงิน<br>ไม่ต้องรอ admin อนุมัติ</p></div>'
+      + '<div class="nosub-step"><div class="nosub-step-num">3</div>'
+        + '<div class="nosub-step-emoji">📊</div>'
+        + '<p class="nosub-step-title">Access Room</p>'
+        + '<p class="nosub-step-desc">เข้าห้องบทวิเคราะห์แบบเรียลไทม์<br>พร้อมแจ้งเตือนทันที</p></div>'
+      + '</div>';
+
+    document.body.innerHTML =
+      '<div class="gate-wrap"><div class="nosub-card">'
+      + '<div class="gate-logo">'
+        + '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/></svg>'
+        + '<span>AURUM ANALYSIS</span></div>'
+      + '<div class="nosub-badge"><span class="nosub-dot"></span>🔒 ยังไม่ได้สมัครสมาชิก · Subscription Required</div>'
+      + '<h1 class="nosub-title">ยังไม่ได้สมัครแพ็คเกจ Aurum Analysis</h1>'
+      + userLine
+      + steps
+      + '<a href="' + PACKAGE_URL + '" class="nosub-cta">ไปสมัครสมาชิก · Subscribe Now →</a>'
+      + '<p class="nosub-teaser">✨ ใช้งานได้ทันทีหลังชำระเงิน · Instant access after subscription</p>'
+      + '<p class="gate-foot"><a href="#" id="gate-switch">เข้าสู่ระบบด้วยบัญชีอื่น</a></p>'
+      + '</div></div>';
+    reveal();
+
+    const logout = document.getElementById('nosub-logout');
+    if (logout) logout.addEventListener('click', gateLogout);
+    const sw = document.getElementById('gate-switch');
+    if (sw) sw.addEventListener('click', gateLogout);
+  }
+
+  // Wait for the full body to parse (so the room markup exists if we pass)
+  // before deciding — avoids racing the feed/render script below.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runGate);
+  } else {
+    runGate();
+  }
+})();
+</script>
 
 <div class="max-w-2xl mx-auto p-3 sm:p-4">
 
@@ -67,7 +296,7 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
     </div>
     <div>
       <div class="flex items-center gap-1.5">
-        <h1 class="font-mono tracking-widest text-[15px] font-semibold">AURUM SIGNALS</h1>
+        <h1 class="font-mono tracking-widest text-[15px] font-semibold">AURUM ANALYSIS</h1>
         <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 1L9 9H1l6.5 5L5 22l7-5 7 5-2.5-8L23 9h-8z"/>
         </svg>
@@ -117,13 +346,13 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
     <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
   </svg>
   <div>
-    <p class="text-sm text-goldSoft font-medium">ยินดีต้อนรับสู่ AURUM Signals</p>
-    <p class="text-xs text-goldDim mt-0.5 leading-relaxed">ทุกสัญญาณเป็นเพียงแนวทาง ไม่ใช่คำแนะนำการลงทุน · เทรดตามดุลพินิจของคุณ · บริหารความเสี่ยงทุกครั้ง</p>
+    <p class="text-sm text-goldSoft font-medium">ยินดีต้อนรับสู่ AURUM Analysis</p>
+    <p class="text-xs text-goldDim mt-0.5 leading-relaxed">ทุกบทวิเคราะห์เป็นเพียงแนวทาง ไม่ใช่คำแนะนำการลงทุน · ตัดสินใจตามดุลพินิจของคุณ · บริหารความเสี่ยงทุกครั้ง</p>
   </div>
 </div>
 
 <div id="signal-feed">
-  <!-- Signals rendered here by JS -->
+  <!-- Analysis cards rendered here by JS -->
 </div>
 
 <div class="bg-surface border-2 border-dashed border-goldDim rounded-2xl p-4 mt-4 flex items-center gap-3 justify-between">
@@ -135,7 +364,7 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
     </div>
     <div class="min-w-0">
       <p class="text-sm font-medium">เปิดการแจ้งเตือน</p>
-      <p class="text-xs text-t2 truncate">รับสัญญาณบนมือถือทันที ไม่พลาดทุกแผน</p>
+      <p class="text-xs text-t2 truncate">รับบทวิเคราะห์บนมือถือทันที ไม่พลาดทุกแผน</p>
     </div>
   </div>
   <button id="enable-push" class="bg-gold text-bg font-semibold text-sm px-4 py-2 rounded-lg hover:bg-goldSoft transition flex-shrink-0">
@@ -162,7 +391,7 @@ const MOCK_SIGNALS = [
     timeframe: '15',
     timeAgo: '2 นาทีที่แล้ว',
     status: 'active',
-    reason: 'Liquidity sweep on M15 + bullish engulfing pattern confirmed. Wait for pullback to entry zone.',
+    reason: 'Liquidity sweep on M15 + bullish structure confirmed. Watching for a pullback into the key level zone.',
     reactions: { fire: 24, gem: 18, bolt: 12 },
     viewers: 47,
     viewerAvatars: [
@@ -208,7 +437,7 @@ const MOCK_SIGNALS = [
     status: 'hit_sl',
     closedPips: -470,
     closedIn: '1 ชั่วโมง 12 นาที',
-    reason: 'News-driven spike invalidated the structure. Honor your stops, next setup ahead.',
+    reason: 'News-driven spike invalidated the structure. Risk level respected, next view ahead.',
     reactions: { thinking: 18, broken: 7 },
     viewers: 94,
     showChart: false,
@@ -227,7 +456,7 @@ function stars(n) {
 }
 
 function reactionEmoji(key) {
-  const map = { fire: '🔥', gem: '💎', bolt: '⚡', trophy: '🏆', rocket: '🚀', thinking: '🤔', broken: '💔' };
+  const map = { fire: '🔥', gem: '💎', bolt: '⚡', trophy: '🏆', rocket: '📊', thinking: '🤔', broken: '⚠️' };
   return map[key] || '⭐';
 }
 
@@ -235,34 +464,37 @@ function statusBadge(status) {
   if (status === 'active') {
     return `<span class="bg-goldBg text-goldSoft text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 border border-goldDim">
       <span class="w-1.5 h-1.5 bg-up rounded-full live-dot"></span>
-      สัญญาณใหม่
+      บทวิเคราะห์ใหม่
     </span>`;
   }
+  // High-confidence view reached its target zone — solid gold (no win/loss semantic).
   if (status === 'hit_tp') {
-    return `<span class="bg-up/15 text-up text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-up/30">
+    return `<span class="bg-gold text-bg text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-gold">
       <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-      ปิด · ชนะ
+      ถึงโซนเป้าหมาย
     </span>`;
   }
+  // View reached its risk zone — outlined gold (neutral, not "loss").
   if (status === 'hit_sl') {
-    return `<span class="bg-down/15 text-down text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-down/30">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      ปิด · ขาดทุน
+    return `<span class="bg-transparent text-goldSoft text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-goldDim">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      ถึงโซนความเสี่ยง
     </span>`;
   }
   return '';
 }
 
 function directionBadge(dir, symbol) {
+  // Bullish view = gold, bearish view = gray. Arrows kept, win/loss color dropped.
   if (dir === 'BUY') {
-    return `<span class="bg-up/15 text-up text-xs font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1 border border-up/30">
+    return `<span class="bg-goldBg text-gold text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide flex items-center gap-1 border border-goldDim">
       <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>
-      BUY ${symbol}
+      มุมมองขาขึ้น ${symbol}
     </span>`;
   }
-  return `<span class="bg-down/15 text-down text-xs font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1 border border-down/30">
+  return `<span class="bg-surface2 text-[#8a8a8a] text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide flex items-center gap-1 border border-line">
     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-    SELL ${symbol}
+    มุมมองขาลง ${symbol}
   </span>`;
 }
 
@@ -284,13 +516,13 @@ function renderSignal(sig) {
     </div>` : '';
   
   const closedInfo = sig.status === 'hit_tp' ? `
-    <div class="bg-up/10 text-up text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-up/20">
+    <div class="bg-goldBg text-goldSoft text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-goldDim">
       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7 21h10v-2H7v2zM12 5.5L17.5 11 12 16.5 6.5 11 12 5.5z"/></svg>
-      <span>เป้าหมายถึงใน ${sig.closedIn} · <span class="font-mono font-semibold">+${sig.closedPips} pips</span></span>
+      <span>ถึงโซนเป้าหมายใน ${sig.closedIn} · <span class="font-mono font-semibold">+${sig.closedPips} จุด</span></span>
     </div>` : sig.status === 'hit_sl' ? `
-    <div class="bg-down/10 text-down text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-down/20">
+    <div class="bg-surface2 text-t2 text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-line">
       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-      <span>ขาดทุน <span class="font-mono font-semibold">${sig.closedPips} pips</span> · บริหารความเสี่ยงสำคัญที่สุด</span>
+      <span>แตะโซนความเสี่ยง <span class="font-mono font-semibold">${sig.closedPips} จุด</span> · บริหารความเสี่ยงสำคัญที่สุด</span>
     </div>` : '';
   
   card.innerHTML = `
@@ -299,7 +531,7 @@ function renderSignal(sig) {
         <div class="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-bg font-mono font-bold text-sm">A</div>
         <div>
           <div class="flex items-center gap-1">
-            <p class="text-sm font-semibold">AURUM Bot</p>
+            <p class="text-sm font-semibold">AURUM Analyst</p>
             <svg class="w-3.5 h-3.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L9 9H1l6.5 5L5 22l7-5 7 5-2.5-8L23 9h-8z"/></svg>
           </div>
           <p class="text-[11px] text-t3 font-mono">${sig.timeAgo} · M${sig.timeframe}</p>
@@ -312,22 +544,22 @@ function renderSignal(sig) {
     
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       ${directionBadge(sig.direction, sig.symbol)}
-      <span class="text-xs text-t2">R:R ${sig.rr}</span>
-      <span class="text-xs text-t2 ml-auto">Confidence <span class="text-gold tracking-wider">${stars(sig.confidence)}</span></span>
+      <span class="text-xs text-t2">อัตราส่วน ${sig.rr}</span>
+      <span class="text-xs text-t2 ml-auto">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(sig.confidence)}</span></span>
     </div>
     
     <div class="grid grid-cols-3 gap-1.5 mb-3">
       <div class="bg-surface2 rounded-lg p-2.5">
-        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">Entry</p>
+        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">จุดสำคัญ</p>
         <p class="font-mono font-semibold text-sm text-gold">${formatPrice(sig.symbol, sig.entry)}</p>
       </div>
       <div class="bg-surface2 rounded-lg p-2.5">
-        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">Take Profit</p>
-        <p class="font-mono font-semibold text-sm text-up">${formatPrice(sig.symbol, sig.tp)}</p>
+        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">โซนเป้าหมาย</p>
+        <p class="font-mono font-semibold text-sm text-goldSoft">${formatPrice(sig.symbol, sig.tp)}</p>
       </div>
       <div class="bg-surface2 rounded-lg p-2.5">
-        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">Stop Loss</p>
-        <p class="font-mono font-semibold text-sm text-down">${formatPrice(sig.symbol, sig.sl)}</p>
+        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">โซนความเสี่ยง</p>
+        <p class="font-mono font-semibold text-sm text-t2">${formatPrice(sig.symbol, sig.sl)}</p>
       </div>
     </div>
     
@@ -361,7 +593,9 @@ function renderSignal(sig) {
 
 function loadTradingViewChart(sig) {
   if (!sig.showChart || typeof TradingView === 'undefined') return;
-  
+  // The gate may have replaced the body (login / no-sub screen) — skip if gone.
+  if (!document.getElementById(`tv-${sig.id}`)) return;
+
   new TradingView.widget({
     container_id: `tv-${sig.id}`,
     symbol: sig.tvSymbol,
@@ -398,8 +632,8 @@ document.getElementById('enable-push').addEventListener('click', async () => {
   }
   const perm = await Notification.requestPermission();
   if (perm === 'granted') {
-    new Notification('AURUM Signals', {
-      body: 'เปิดการแจ้งเตือนเรียบร้อย — คุณจะได้รับสัญญาณใหม่ทันที',
+    new Notification('AURUM Analysis', {
+      body: 'เปิดการแจ้งเตือนเรียบร้อย — คุณจะได้รับบทวิเคราะห์ใหม่ทันที',
       icon: '/icon-192.png',
     });
     document.getElementById('enable-push').textContent = '✓ เปิดแล้ว';
