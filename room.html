@@ -135,14 +135,26 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
       method: 'POST',
       headers: { Authorization: 'Bearer ' + session.access_token }
     });
-    if (!res.ok) return false;
+    if (!res.ok) return null;
     const body = await res.json().catch(function () { return {}; });
     const subs = body.subscriptions || [];
-    return subs.some(function (s) {
+    // Return the matched subscription (truthy) or null — callers treat it as a gate pass.
+    return subs.find(function (s) {
       return s.product_type === 'aurum_analysis'
         && s.status === 'active'
         && s.expires_at && new Date(s.expires_at) > new Date();
-    });
+    }) || null;
+  }
+
+  // Render the real subscription expiry into the room banner (replaces hardcoded mock).
+  function renderExpiry(expiresAt) {
+    if (!expiresAt) return;
+    const daysEl = document.getElementById('room-expiry-days');
+    const dateEl = document.getElementById('room-expiry-date');
+    const daysLeft = Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000));
+    const formattedDate = new Date(expiresAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (daysEl) daysEl.textContent = daysLeft + ' วัน';
+    if (dateEl) dateEl.textContent = '· หมดอายุ ' + formattedDate;
   }
 
   async function runGate() {
@@ -150,10 +162,11 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
       const { data: { session } } = await sb.auth.getSession();
       if (!session) { showLoginOverlay(); return; }
 
-      const ok = await hasActiveAnalysis(session);
-      if (!ok) { showNoSubscriptionScreen(session.user && session.user.email); return; }
+      const sub = await hasActiveAnalysis(session);
+      if (!sub) { showNoSubscriptionScreen(session.user && session.user.email); return; }
 
-      // Passed — reveal the room and watch for mid-session expiry.
+      // Passed — show the real expiry, reveal the room, watch for mid-session expiry.
+      renderExpiry(sub.expires_at);
       reveal();
       window.__AURUM_GATE_PASSED = true;
       setInterval(recheck, 5 * 60 * 1000);
@@ -167,8 +180,9 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
     try {
       const { data: { session } } = await sb.auth.getSession();
       if (!session) { showNoSubscriptionScreen(); return; }
-      const ok = await hasActiveAnalysis(session);
-      if (!ok) showNoSubscriptionScreen(session.user && session.user.email);
+      const sub = await hasActiveAnalysis(session);
+      if (!sub) { showNoSubscriptionScreen(session.user && session.user.email); return; }
+      renderExpiry(sub.expires_at);
     } catch (e) { /* transient — keep current state, try again next tick */ }
   }
 
@@ -321,8 +335,8 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
     <span class="text-goldSoft text-xs sm:text-sm">
-      เหลือ <span class="font-mono font-semibold text-gold">23 วัน</span>
-      <span class="text-t3 text-xs hidden sm:inline">· หมดอายุ 27 มิ.ย. 2026</span>
+      เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
+      <span id="room-expiry-date" class="text-t3 text-xs hidden sm:inline">· หมดอายุ —</span>
     </span>
   </div>
   <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap">ต่ออายุ</button>
