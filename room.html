@@ -69,6 +69,28 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
 .gate-foot { margin: 16px 0 0; font-size: 12px; color: #6b7280; }
 .gate-foot a { color: #e7c66e; text-decoration: underline; }
 .gate-error { color: #f23645; font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+
+/* ---- Not-subscribed notification screen (wider than the basic gate card) ---- */
+.nosub-card { width: 100%; max-width: 620px; background: #0a0a0b; border: 1px solid #252531; border-radius: 22px; padding: 34px 28px; text-align: center; }
+.nosub-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(242, 54, 69, 0.08); border: 1px solid rgba(242, 54, 69, 0.3); color: #f5cd52; font-size: 11px; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px; letter-spacing: 0.02em; }
+.nosub-dot { width: 7px; height: 7px; border-radius: 999px; background: #f23645; box-shadow: 0 0 8px rgba(242, 54, 69, 0.8); animation: pulse 1.5s infinite; }
+.nosub-title { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 26px; line-height: 1.3; font-weight: 700; margin: 0 0 10px; background: linear-gradient(135deg, #f5cd52, #d4af37); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.nosub-user { font-size: 12px; color: #6b7280; margin: 0 0 22px; }
+.nosub-email { color: #9ca3af; font-weight: 500; }
+.nosub-user a { color: #e7c66e; text-decoration: underline; margin-left: 8px; }
+.nosub-steps { display: flex; gap: 12px; margin-bottom: 24px; text-align: left; }
+.nosub-step { flex: 1; background: #13131a; border: 1px solid #8b7029; border-radius: 14px; padding: 16px 14px; position: relative; }
+.nosub-step-num { position: absolute; top: -10px; left: 14px; width: 22px; height: 22px; border-radius: 999px; background: #d4af37; color: #0a0a0b; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.nosub-step-emoji { font-size: 22px; margin: 6px 0 8px; }
+.nosub-step-title { font-size: 13px; font-weight: 600; color: #e8e8ed; margin: 0 0 6px; }
+.nosub-step-desc { font-size: 11px; color: #9ca3af; line-height: 1.6; margin: 0; }
+.nosub-cta { display: block; width: 100%; box-sizing: border-box; background: linear-gradient(135deg, #f5cd52, #d4af37); color: #0a0a0b; font-weight: 700; font-size: 15px; padding: 14px; border: none; border-radius: 12px; cursor: pointer; text-decoration: none; box-shadow: 0 0 24px rgba(212, 175, 55, 0.35); transition: box-shadow 0.2s, transform 0.2s; }
+.nosub-cta:hover { box-shadow: 0 0 34px rgba(212, 175, 55, 0.55); transform: translateY(-1px); }
+.nosub-teaser { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 12px; color: #8b7029; margin: 14px 0 0; }
+@media (max-width: 480px) {
+  .nosub-steps { flex-direction: column; }
+  .nosub-title { font-size: 22px; }
+}
 </style>
 </head>
 
@@ -129,7 +151,7 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
       if (!session) { showLoginOverlay(); return; }
 
       const ok = await hasActiveAnalysis(session);
-      if (!ok) { showNoSubscriptionScreen(); return; }
+      if (!ok) { showNoSubscriptionScreen(session.user && session.user.email); return; }
 
       // Passed — reveal the room and watch for mid-session expiry.
       reveal();
@@ -146,7 +168,7 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
       const { data: { session } } = await sb.auth.getSession();
       if (!session) { showNoSubscriptionScreen(); return; }
       const ok = await hasActiveAnalysis(session);
-      if (!ok) showNoSubscriptionScreen();
+      if (!ok) showNoSubscriptionScreen(session.user && session.user.email);
     } catch (e) { /* transient — keep current state, try again next tick */ }
   }
 
@@ -199,20 +221,58 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
     });
   }
 
-  function showNoSubscriptionScreen() {
-    document.body.innerHTML = gateShell(
-      '<h1>ต้องเป็นสมาชิกก่อนใช้งาน</h1>'
-      + '<p>ห้องบทวิเคราะห์ Aurum Analysis สำหรับสมาชิกที่สมัครแล้วเท่านั้น</p>'
-      + '<a href="' + PACKAGE_URL + '" class="gate-btn">ไปสมัครสมาชิก</a>'
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function gateLogout(e) {
+    if (e) e.preventDefault();
+    await sb.auth.signOut();
+    location.reload();
+  }
+
+  function showNoSubscriptionScreen(userEmail) {
+    const userLine = userEmail
+      ? '<p class="nosub-user">เข้าสู่ระบบในชื่อ: '
+          + '<span class="nosub-email">' + escapeHtml(userEmail) + '</span>'
+          + '<a href="#" id="nosub-logout">ออกจากระบบ</a></p>'
+      : '';
+
+    const steps =
+      '<div class="nosub-steps">'
+      + '<div class="nosub-step"><div class="nosub-step-num">1</div>'
+        + '<div class="nosub-step-emoji">💰</div>'
+        + '<p class="nosub-step-title">Subscribe</p>'
+        + '<p class="nosub-step-desc">เลือกแพ็คเกจที่ aurumlive.com/package<br>$20/สัปดาห์ หรือ $60/เดือน</p></div>'
+      + '<div class="nosub-step"><div class="nosub-step-num">2</div>'
+        + '<div class="nosub-step-emoji">✅</div>'
+        + '<p class="nosub-step-title">Auto-Activate</p>'
+        + '<p class="nosub-step-desc">ระบบเปิดสิทธิ์ทันทีหลังชำระเงิน<br>ไม่ต้องรอ admin อนุมัติ</p></div>'
+      + '<div class="nosub-step"><div class="nosub-step-num">3</div>'
+        + '<div class="nosub-step-emoji">📊</div>'
+        + '<p class="nosub-step-title">Access Room</p>'
+        + '<p class="nosub-step-desc">เข้าห้องบทวิเคราะห์แบบเรียลไทม์<br>พร้อมแจ้งเตือนทันที</p></div>'
+      + '</div>';
+
+    document.body.innerHTML =
+      '<div class="gate-wrap"><div class="nosub-card">'
+      + '<div class="gate-logo">'
+        + '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/></svg>'
+        + '<span>AURUM ANALYSIS</span></div>'
+      + '<div class="nosub-badge"><span class="nosub-dot"></span>🔒 ยังไม่ได้สมัครสมาชิก · Subscription Required</div>'
+      + '<h1 class="nosub-title">ยังไม่ได้สมัครแพ็คเกจ Aurum Analysis</h1>'
+      + userLine
+      + steps
+      + '<a href="' + PACKAGE_URL + '" class="nosub-cta">ไปสมัครสมาชิก · Subscribe Now →</a>'
+      + '<p class="nosub-teaser">✨ ใช้งานได้ทันทีหลังชำระเงิน · Instant access after subscription</p>'
       + '<p class="gate-foot"><a href="#" id="gate-switch">เข้าสู่ระบบด้วยบัญชีอื่น</a></p>'
-    );
+      + '</div></div>';
     reveal();
+
+    const logout = document.getElementById('nosub-logout');
+    if (logout) logout.addEventListener('click', gateLogout);
     const sw = document.getElementById('gate-switch');
-    if (sw) sw.addEventListener('click', async function (e) {
-      e.preventDefault();
-      await sb.auth.signOut();
-      location.reload();
-    });
+    if (sw) sw.addEventListener('click', gateLogout);
   }
 
   // Wait for the full body to parse (so the room markup exists if we pass)
