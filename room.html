@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Aurum Analysis · ห้องบทวิเคราะห์สด</title>
-<meta name="theme-color" content="#0a0a0b">
+<meta name="theme-color" content="#0a0420">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -17,23 +17,26 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        bg: '#0a0a0b',
-        surface: '#13131a',
-        surface2: '#1a1a23',
-        line: '#252531',
+        bg: '#0a0420',
+        bg2: '#1a0833',
+        surface: '#160a2e',
+        surface2: '#1e0f3a',
+        line: '#2c1a4a',
         gold: '#d4af37',
         goldSoft: '#e7c66e',
         goldDim: '#8b7029',
-        goldBg: '#1f1a0a',
-        up: '#089981',
-        down: '#f23645',
-        t1: '#e8e8ed',
-        t2: '#9ca3af',
-        t3: '#6b7280',
+        goldBg: '#241a0d',
+        bear: '#f23645',
+        bearBg: '#2a0d12',
+        warm: '#f5e8c7',
+        warmDim: '#c9b896',
+        t2: '#a99fc4',
+        t3: '#7a6f99',
       },
       fontFamily: {
         sans: ['"IBM Plex Sans Thai"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
       }
     }
   }
@@ -41,17 +44,26 @@ tailwind.config = {
 </script>
 
 <style>
-body { background: #0a0a0b; font-feature-settings: "ss01"; }
+html, body { height: 100%; }
+body {
+  background: linear-gradient(165deg, #0a0420 0%, #140628 45%, #1a0833 100%);
+  background-attachment: fixed;
+  font-feature-settings: "ss01";
+}
 .live-dot { animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .tv-wrap { background: #131722; border-radius: 12px; overflow: hidden; }
-.react-btn { transition: background 0.15s; }
-.react-btn:hover { background: #252531; }
-.scroll-y::-webkit-scrollbar { width: 6px; }
-.scroll-y::-webkit-scrollbar-thumb { background: #252531; border-radius: 3px; }
-.scroll-y::-webkit-scrollbar-track { background: transparent; }
 .fade-in { animation: fadeIn 0.4s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.serif-h { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; }
+.scroll-y::-webkit-scrollbar { width: 6px; }
+.scroll-y::-webkit-scrollbar-thumb { background: #2c1a4a; border-radius: 3px; }
+.scroll-y::-webkit-scrollbar-track { background: transparent; }
+.list-item { transition: background 0.15s, border-color 0.15s; }
+.list-item.active { background: linear-gradient(90deg, rgba(212,175,55,0.14), rgba(212,175,55,0.03)); border-color: #8b7029; }
+.list-item.active .item-bar { opacity: 1; }
+.item-bar { opacity: 0; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23c9b896' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; background-size: 14px; -webkit-appearance: none; appearance: none; }
 
 /* ---- Access gate screens (login / no-subscription) ---- */
 .gate-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -94,7 +106,7 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
 </style>
 </head>
 
-<body class="text-t1 font-sans antialiased min-h-screen">
+<body class="text-warm font-sans antialiased">
 
 <!-- =====================================================================
      Access gate (Option A) — runs before the room renders.
@@ -299,363 +311,276 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
 })();
 </script>
 
-<div class="max-w-2xl mx-auto p-3 sm:p-4">
+<!-- ============================ VARIANT C — Dashboard ============================ -->
 
-<header class="flex justify-between items-center bg-surface rounded-2xl p-3.5 mb-3 border border-line">
-  <div class="flex items-center gap-3">
-    <div class="w-11 h-11 rounded-xl bg-goldBg flex items-center justify-center flex-shrink-0 border border-goldDim">
-      <svg class="w-6 h-6 text-gold" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/>
-      </svg>
-    </div>
-    <div>
-      <div class="flex items-center gap-1.5">
-        <h1 class="font-mono tracking-widest text-[15px] font-semibold">AURUM ANALYSIS</h1>
-        <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 1L9 9H1l6.5 5L5 22l7-5 7 5-2.5-8L23 9h-8z"/>
-        </svg>
+<div class="h-screen flex flex-col max-w-7xl mx-auto">
+
+  <!-- Top bar -->
+  <header class="flex-shrink-0 border-b border-line bg-bg/70 backdrop-blur-md px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-9 h-9 rounded-xl bg-goldBg flex items-center justify-center border border-goldDim flex-shrink-0">
+        <svg class="w-5 h-5 text-gold" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/></svg>
       </div>
-      <p class="text-xs text-t2 flex items-center gap-1.5 mt-0.5">
-        <span class="inline-block w-1.5 h-1.5 bg-up rounded-full live-dot"></span>
-        <span>247 members · 12 ออนไลน์</span>
-      </p>
+      <div class="min-w-0">
+        <h1 class="serif-h text-gold text-xl leading-none font-semibold truncate">AURUM ANALYSIS</h1>
+        <p class="text-[11px] text-t2 flex items-center gap-1.5 mt-0.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full live-dot" style="background:#22c55e"></span>
+          247 members · <span class="text-goldSoft">12 ออนไลน์</span>
+        </p>
+      </div>
     </div>
-  </div>
-  <button class="bg-goldBg border border-goldDim text-goldSoft text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 hover:bg-goldDim hover:text-bg transition">
-    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-    </svg>
-    <span class="hidden sm:inline">กดติดตาม</span>
-  </button>
-</header>
-
-<div class="flex items-center justify-between bg-goldBg border border-goldDim rounded-xl px-4 py-2 mb-3">
-  <div class="flex items-center gap-2 text-sm">
-    <svg class="w-4 h-4 text-goldSoft flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-    </svg>
-    <span class="text-goldSoft text-xs sm:text-sm">
-      เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
-      <span id="room-expiry-date" class="text-t3 text-xs hidden sm:inline">· หมดอายุ —</span>
-    </span>
-  </div>
-  <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap">ต่ออายุ</button>
-</div>
-
-<div class="flex items-center gap-3 bg-surface rounded-xl px-4 py-2.5 mb-3 border border-line">
-  <span class="text-[10px] text-t3 uppercase tracking-widest font-semibold flex-shrink-0">ออนไลน์</span>
-  <div class="flex items-center">
-    <span class="w-6 h-6 rounded-full bg-purple-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">SK</span>
-    <span class="w-6 h-6 rounded-full bg-teal-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">NT</span>
-    <span class="w-6 h-6 rounded-full bg-orange-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">JM</span>
-    <span class="w-6 h-6 rounded-full bg-pink-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">PR</span>
-    <span class="w-6 h-6 rounded-full bg-blue-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">BC</span>
-    <span class="w-6 h-6 rounded-full bg-gold text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5 text-bg">AR</span>
-    <span class="w-6 h-6 rounded-full bg-surface2 text-[9px] flex items-center justify-center font-semibold text-t2 border border-line">+6</span>
-  </div>
-</div>
-
-<div class="flex items-start gap-2.5 bg-goldBg border border-goldDim rounded-xl px-4 py-3 mb-4">
-  <svg class="w-4 h-4 text-goldSoft flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
-  </svg>
-  <div>
-    <p class="text-sm text-goldSoft font-medium">ยินดีต้อนรับสู่ AURUM Analysis</p>
-    <p class="text-xs text-goldDim mt-0.5 leading-relaxed">ทุกบทวิเคราะห์เป็นเพียงแนวทาง ไม่ใช่คำแนะนำการลงทุน · ตัดสินใจตามดุลพินิจของคุณ · บริหารความเสี่ยงทุกครั้ง</p>
-  </div>
-</div>
-
-<div id="signal-feed">
-  <!-- Analysis cards rendered here by JS -->
-</div>
-
-<div class="bg-surface border-2 border-dashed border-goldDim rounded-2xl p-4 mt-4 flex items-center gap-3 justify-between">
-  <div class="flex items-center gap-3 flex-1 min-w-0">
-    <div class="w-10 h-10 rounded-full bg-goldBg flex items-center justify-center flex-shrink-0">
-      <svg class="w-5 h-5 text-goldSoft" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+    <!-- Expiry banner — keep IDs for renderExpiry() -->
+    <div class="flex items-center gap-2 text-sm bg-goldBg border border-goldDim rounded-lg px-3 py-1.5">
+      <svg class="w-4 h-4 text-goldSoft flex-shrink-0 hidden sm:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
+      <span class="text-goldSoft text-xs">
+        เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
+        <span id="room-expiry-date" class="text-t3 text-xs hidden md:inline">· หมดอายุ —</span>
+      </span>
+      <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap ml-1">ต่ออายุ</button>
     </div>
-    <div class="min-w-0">
-      <p class="text-sm font-medium">เปิดการแจ้งเตือน</p>
-      <p class="text-xs text-t2 truncate">รับบทวิเคราะห์บนมือถือทันที ไม่พลาดทุกแผน</p>
-    </div>
-  </div>
-  <button id="enable-push" class="bg-gold text-bg font-semibold text-sm px-4 py-2 rounded-lg hover:bg-goldSoft transition flex-shrink-0">
-    เปิด
-  </button>
-</div>
+  </header>
 
+  <!-- Mobile tabs -->
+  <div class="md:hidden flex-shrink-0 flex border-b border-line bg-bg/60">
+    <button id="tab-list" class="flex-1 py-2.5 text-sm font-medium text-gold border-b-2 border-gold">รายการ</button>
+    <button id="tab-detail" class="flex-1 py-2.5 text-sm font-medium text-warmDim border-b-2 border-transparent">รายละเอียด</button>
+  </div>
+
+  <!-- Split pane -->
+  <div class="flex-1 min-h-0 flex">
+
+    <!-- LEFT: list (35%) -->
+    <aside id="pane-list" class="w-full md:w-[35%] md:max-w-sm flex flex-col border-r border-line min-h-0">
+      <!-- Filter bar -->
+      <div class="flex-shrink-0 p-3 border-b border-line space-y-2">
+        <div class="flex gap-2">
+          <select id="f-symbol" class="flex-1 bg-surface border border-line rounded-lg text-xs text-warm pl-3 pr-7 py-2 outline-none focus:border-goldDim">
+            <option value="all">ทุกสินทรัพย์</option>
+            <option value="XAUUSD">XAUUSD</option>
+            <option value="EURUSD">EURUSD</option>
+            <option value="BTCUSD">BTCUSD</option>
+          </select>
+          <select id="f-sort" class="flex-1 bg-surface border border-line rounded-lg text-xs text-warm pl-3 pr-7 py-2 outline-none focus:border-goldDim">
+            <option value="new">ใหม่สุดก่อน</option>
+            <option value="old">เก่าสุดก่อน</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-1.5 text-[11px] text-warmDim">
+          <span class="mr-1">ความเชื่อมั่น</span>
+          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim active:scale-95" data-conf="0">ทั้งหมด</button>
+          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="3">3★+</button>
+          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="4">4★+</button>
+          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="5">5★</button>
+        </div>
+      </div>
+      <!-- List -->
+      <div id="list" class="flex-1 min-h-0 overflow-y-auto scroll-y p-2 space-y-1.5"></div>
+    </aside>
+
+    <!-- RIGHT: detail (65%) -->
+    <section id="pane-detail" class="hidden md:flex flex-1 min-h-0 flex-col overflow-y-auto scroll-y">
+      <div id="detail" class="p-4 sm:p-5"></div>
+    </section>
+
+  </div>
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
 <script>
-
-const MOCK_SIGNALS = [
-  {
-    id: 'sig-001',
-    symbol: 'XAUUSD',
-    tvSymbol: 'OANDA:XAUUSD',
-    direction: 'BUY',
-    entry: 2645.50,
-    tp: 2655.00,
-    sl: 2640.00,
-    rr: '1:1.7',
-    confidence: 4,
-    timeframe: '15',
-    timeAgo: '2 นาทีที่แล้ว',
-    status: 'active',
-    reason: 'Liquidity sweep on M15 + bullish structure confirmed. Watching for a pullback into the key level zone.',
-    reactions: { fire: 24, gem: 18, bolt: 12 },
-    viewers: 47,
-    viewerAvatars: [
-      { initials: 'SK', color: 'bg-purple-600' },
-      { initials: 'NT', color: 'bg-teal-600' },
-      { initials: 'JM', color: 'bg-orange-600' },
-      { initials: 'PR', color: 'bg-pink-600' },
-    ],
-    showChart: true,
-  },
-  {
-    id: 'sig-002',
-    symbol: 'EURUSD',
-    tvSymbol: 'FX:EURUSD',
-    direction: 'SELL',
-    entry: 1.08450,
-    tp: 1.08150,
-    sl: 1.08650,
-    rr: '1:1.5',
-    confidence: 5,
-    timeframe: '30',
-    timeAgo: '47 นาทีที่แล้ว',
-    status: 'hit_tp',
-    closedPips: 30,
-    closedIn: '38 นาที',
-    reason: 'Resistance rejection at 1.0850 confirmed. Target reached cleanly.',
-    reactions: { trophy: 89, fire: 42, rocket: 31 },
-    viewers: 183,
-    showChart: false,
-  },
-  {
-    id: 'sig-003',
-    symbol: 'BTCUSD',
-    tvSymbol: 'BITSTAMP:BTCUSD',
-    direction: 'BUY',
-    entry: 96420,
-    tp: 97200,
-    sl: 95950,
-    rr: '1:1.6',
-    confidence: 3,
-    timeframe: '60',
-    timeAgo: '2 ชั่วโมงที่แล้ว',
-    status: 'hit_sl',
-    closedPips: -470,
-    closedIn: '1 ชั่วโมง 12 นาที',
-    reason: 'News-driven spike invalidated the structure. Risk level respected, next view ahead.',
-    reactions: { thinking: 18, broken: 7 },
-    viewers: 94,
-    showChart: false,
-  },
+/* Mock data only — replace with a live Supabase feed when the backend is ready. */
+const SAMPLE_ANALYSES = [
+  { id:'an-001', symbol:'XAUUSD', tvSymbol:'OANDA:XAUUSD', view:'bullish', timeframe:'15', minsAgo:2, timeAgo:'2 นาทีที่แล้ว', confidence:4, ratio:'1:1.7', keyLevel:'2,645.50', targetZone:'2,655.00', riskZone:'2,640.00',
+    title:'ทองคำยืนเหนือจุดสำคัญ มุมมองขาขึ้นระยะสั้น',
+    note:'ราคากวาดสภาพคล่องบริเวณ M15 และยืนเหนือจุดสำคัญได้อย่างมั่นคง มุมมองยังเป็นขาขึ้น รอจังหวะย่อตัวเข้าหาโซนแนวรับเพื่อยืนยันโครงสร้างก่อนเดินหน้าทดสอบโซนเป้าหมายด้านบน' },
+  { id:'an-002', symbol:'EURUSD', tvSymbol:'FX:EURUSD', view:'bearish', timeframe:'30', minsAgo:24, timeAgo:'24 นาทีที่แล้ว', confidence:5, ratio:'1:1.5', keyLevel:'1.08450', targetZone:'1.08150', riskZone:'1.08650',
+    title:'ยูโรปฏิเสธแนวต้าน มุมมองขาลงมีน้ำหนัก',
+    note:'แนวต้านบริเวณ 1.0850 ปฏิเสธราคาชัดเจน มุมมองขาลงมีน้ำหนัก ตราบใดที่ราคายังอยู่ใต้จุดสำคัญ โซนเป้าหมายถัดไปอยู่ที่แนวรับด้านล่าง' },
+  { id:'an-003', symbol:'BTCUSD', tvSymbol:'BITSTAMP:BTCUSD', view:'bullish', timeframe:'60', minsAgo:60, timeAgo:'1 ชั่วโมงที่แล้ว', confidence:3, ratio:'1:2.0', keyLevel:'96,420', targetZone:'98,000', riskZone:'95,600',
+    title:'บิตคอยน์ทำจุดต่ำยกตัว โครงสร้างขาขึ้นเชิงรอบ',
+    note:'โครงสร้าง H1 ยังคงทำจุดสูงและจุดต่ำยกตัวขึ้น มุมมองขาขึ้นเชิงรอบ ความเชื่อมั่นปานกลางเพราะใกล้โซนแนวต้านสำคัญ ติดตามการทะลุอย่างใกล้ชิด' },
+  { id:'an-004', symbol:'XAUUSD', tvSymbol:'OANDA:XAUUSD', view:'bearish', timeframe:'5', minsAgo:120, timeAgo:'2 ชั่วโมงที่แล้ว', confidence:3, ratio:'1:1.4', keyLevel:'2,662.00', targetZone:'2,652.00', riskZone:'2,667.00',
+    title:'ทองคำแตะโซนความเสี่ยง ปรับฐานระยะสั้น',
+    note:'ภาพระยะสั้น M5 ราคาแตะโซนความเสี่ยงด้านบนแล้วเริ่มอ่อนแรง มุมมองขาลงระยะสั้นเพื่อปรับฐาน บริหารความเสี่ยงเป็นเรื่องสำคัญที่สุด' },
+  { id:'an-005', symbol:'EURUSD', tvSymbol:'FX:EURUSD', view:'bullish', timeframe:'240', minsAgo:240, timeAgo:'4 ชั่วโมงที่แล้ว', confidence:4, ratio:'1:2.3', keyLevel:'1.07900', targetZone:'1.08600', riskZone:'1.07550',
+    title:'ยูโรสะสมกำลังเหนือจุดสำคัญ H4',
+    note:'กรอบ H4 ราคายืนเหนือจุดสำคัญและสร้างฐานสะสมกำลัง มุมมองขาขึ้นเชิงโครงสร้าง อัตราส่วนน่าสนใจหากราคารักษาระดับเหนือโซนแนวรับได้' },
+  { id:'an-006', symbol:'BTCUSD', tvSymbol:'BITSTAMP:BTCUSD', view:'bearish', timeframe:'15', minsAgo:360, timeAgo:'6 ชั่วโมงที่แล้ว', confidence:2, ratio:'1:1.3', keyLevel:'97,800', targetZone:'96,500', riskZone:'98,400',
+    title:'บิตคอยน์ชะลอใต้แนวต้าน มุมมองขาลงระยะสั้น',
+    note:'ภาพ M15 ราคาชะลอตัวใต้แนวต้านและเริ่มสร้างจุดสูงที่ต่ำลง มุมมองขาลงระยะสั้น ความเชื่อมั่นไม่สูงเพราะแนวโน้มใหญ่ยังไม่เปลี่ยน' },
+  { id:'an-007', symbol:'XAUUSD', tvSymbol:'OANDA:XAUUSD', view:'bullish', timeframe:'60', minsAgo:480, timeAgo:'8 ชั่วโมงที่แล้ว', confidence:5, ratio:'1:2.5', keyLevel:'2,630.00', targetZone:'2,660.00', riskZone:'2,618.00',
+    title:'ทองคำสร้างฐานใหญ่ มุมมองขาขึ้นเชิงโครงสร้าง',
+    note:'กรอบ H1 ราคาสร้างฐานสะสมเหนือจุดสำคัญและเริ่มทำจุดสูงยกตัว มุมมองขาขึ้นเชิงโครงสร้าง ความเชื่อมั่นสูง อัตราส่วนน่าสนใจหากยืนเหนือโซนแนวรับได้' },
+  { id:'an-008', symbol:'EURUSD', tvSymbol:'FX:EURUSD', view:'bearish', timeframe:'15', minsAgo:600, timeAgo:'10 ชั่วโมงที่แล้ว', confidence:3, ratio:'1:1.6', keyLevel:'1.08200', targetZone:'1.07950', riskZone:'1.08360',
+    title:'ยูโรอ่อนแรงใต้จุดสำคัญ มุมมองขาลงระยะสั้น',
+    note:'ภาพ M15 ราคาหลุดจุดสำคัญและรีเทสต์ไม่ผ่าน มุมมองขาลงระยะสั้น โซนเป้าหมายอยู่ที่แนวรับถัดไป บริหารความเสี่ยงเหนือจุดสำคัญ' },
 ];
 
-function formatPrice(symbol, price) {
-  if (symbol.includes('BTC') || symbol.includes('XAU')) {
-    return price.toLocaleString('en-US', { minimumFractionDigits: symbol.includes('XAU') ? 2 : 0, maximumFractionDigits: 2 });
+function stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+
+function viewTagSm(view) {
+  if (view === 'bullish') {
+    return `<span class="inline-flex items-center gap-0.5 text-gold text-[11px] font-semibold">
+      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>ขาขึ้น</span>`;
   }
-  return price.toFixed(5);
+  return `<span class="inline-flex items-center gap-0.5 text-bear text-[11px] font-semibold">
+    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>ขาลง</span>`;
 }
-
-function stars(n) {
-  return '★'.repeat(n) + '☆'.repeat(5 - n);
-}
-
-function reactionEmoji(key) {
-  const map = { fire: '🔥', gem: '💎', bolt: '⚡', trophy: '🏆', rocket: '📊', thinking: '🤔', broken: '⚠️' };
-  return map[key] || '⭐';
-}
-
-function statusBadge(status) {
-  if (status === 'active') {
-    return `<span class="bg-goldBg text-goldSoft text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 border border-goldDim">
-      <span class="w-1.5 h-1.5 bg-up rounded-full live-dot"></span>
-      บทวิเคราะห์ใหม่
-    </span>`;
+function viewTagLg(view) {
+  if (view === 'bullish') {
+    return `<span class="inline-flex items-center gap-1 bg-goldBg text-gold text-xs font-semibold px-2.5 py-1 rounded-md border border-goldDim">
+      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>มุมมองขาขึ้น</span>`;
   }
-  // High-confidence view reached its target zone — solid gold (no win/loss semantic).
-  if (status === 'hit_tp') {
-    return `<span class="bg-gold text-bg text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-gold">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-      ถึงโซนเป้าหมาย
-    </span>`;
-  }
-  // View reached its risk zone — outlined gold (neutral, not "loss").
-  if (status === 'hit_sl') {
-    return `<span class="bg-transparent text-goldSoft text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-goldDim">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-      ถึงโซนความเสี่ยง
-    </span>`;
-  }
-  return '';
+  return `<span class="inline-flex items-center gap-1 bg-bearBg text-bear text-xs font-semibold px-2.5 py-1 rounded-md border border-bear/40">
+    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>มุมมองขาลง</span>`;
 }
 
-function directionBadge(dir, symbol) {
-  // Bullish view = gold, bearish view = gray. Arrows kept, win/loss color dropped.
-  if (dir === 'BUY') {
-    return `<span class="bg-goldBg text-gold text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide flex items-center gap-1 border border-goldDim">
-      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>
-      มุมมองขาขึ้น ${symbol}
-    </span>`;
+const byId = Object.fromEntries(SAMPLE_ANALYSES.map(a => [a.id, a]));
+const listEl = document.getElementById('list');
+const detailEl = document.getElementById('detail');
+let state = { symbol: 'all', sort: 'new', conf: 0, selected: SAMPLE_ANALYSES[0].id };
+
+function visibleList() {
+  let list = SAMPLE_ANALYSES.filter(a =>
+    (state.symbol === 'all' || a.symbol === state.symbol) && a.confidence >= state.conf);
+  list.sort((x, y) => state.sort === 'new' ? x.minsAgo - y.minsAgo : y.minsAgo - x.minsAgo);
+  return list;
+}
+
+function renderList() {
+  const list = visibleList();
+  listEl.innerHTML = '';
+  if (!list.length) {
+    listEl.innerHTML = '<p class="text-xs text-t3 text-center py-8">ไม่พบบทวิเคราะห์ตามตัวกรอง</p>';
+    return;
   }
-  return `<span class="bg-surface2 text-[#8a8a8a] text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide flex items-center gap-1 border border-line">
-    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-    มุมมองขาลง ${symbol}
-  </span>`;
-}
-
-function renderSignal(sig) {
-  const card = document.createElement('article');
-  card.className = 'bg-surface rounded-2xl p-4 mb-3 border border-line fade-in' + (sig.status !== 'active' ? ' opacity-80' : '');
-  
-  const reactionsHtml = Object.entries(sig.reactions).map(([k, v]) => 
-    `<button class="react-btn flex items-center gap-1 bg-surface2 px-2.5 py-1 rounded-full text-xs border border-line">${reactionEmoji(k)} ${v}</button>`
-  ).join('');
-  
-  const viewerStack = (sig.viewerAvatars || []).map((a, i) => 
-    `<span class="w-5 h-5 rounded-full ${a.color} text-[8px] flex items-center justify-center font-semibold font-mono border border-bg ${i === sig.viewerAvatars.length - 1 ? '' : '-mr-1.5'}">${a.initials}</span>`
-  ).join('');
-  
-  const chartHtml = sig.showChart ? `
-    <div class="tv-wrap mb-3" style="height: 280px;">
-      <div id="tv-${sig.id}" style="height: 100%; width: 100%;"></div>
-    </div>` : '';
-  
-  const closedInfo = sig.status === 'hit_tp' ? `
-    <div class="bg-goldBg text-goldSoft text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-goldDim">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7 21h10v-2H7v2zM12 5.5L17.5 11 12 16.5 6.5 11 12 5.5z"/></svg>
-      <span>ถึงโซนเป้าหมายใน ${sig.closedIn} · <span class="font-mono font-semibold">+${sig.closedPips} จุด</span></span>
-    </div>` : sig.status === 'hit_sl' ? `
-    <div class="bg-surface2 text-t2 text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-line">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-      <span>แตะโซนความเสี่ยง <span class="font-mono font-semibold">${sig.closedPips} จุด</span> · บริหารความเสี่ยงสำคัญที่สุด</span>
-    </div>` : '';
-  
-  card.innerHTML = `
-    <header class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2.5">
-        <div class="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-bg font-mono font-bold text-sm">A</div>
-        <div>
-          <div class="flex items-center gap-1">
-            <p class="text-sm font-semibold">AURUM Analyst</p>
-            <svg class="w-3.5 h-3.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L9 9H1l6.5 5L5 22l7-5 7 5-2.5-8L23 9h-8z"/></svg>
-          </div>
-          <p class="text-[11px] text-t3 font-mono">${sig.timeAgo} · M${sig.timeframe}</p>
-        </div>
+  if (!list.find(a => a.id === state.selected)) state.selected = list[0].id;
+  list.forEach(a => {
+    const active = a.id === state.selected;
+    const el = document.createElement('button');
+    el.className = 'list-item relative w-full text-left bg-surface border border-line rounded-xl p-3 flex flex-col gap-1.5' + (active ? ' active' : '');
+    el.innerHTML = `
+      <span class="item-bar absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gold"></span>
+      <div class="flex items-center justify-between">
+        <span class="font-mono text-sm font-semibold text-warm">${a.symbol}</span>
+        <span class="text-[10px] text-t3 font-mono">${a.timeAgo}</span>
       </div>
-      ${statusBadge(sig.status)}
-    </header>
-    
-    ${chartHtml}
-    
-    <div class="flex items-center gap-2 mb-3 flex-wrap">
-      ${directionBadge(sig.direction, sig.symbol)}
-      <span class="text-xs text-t2">อัตราส่วน ${sig.rr}</span>
-      <span class="text-xs text-t2 ml-auto">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(sig.confidence)}</span></span>
-    </div>
-    
-    <div class="grid grid-cols-3 gap-1.5 mb-3">
-      <div class="bg-surface2 rounded-lg p-2.5">
-        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">จุดสำคัญ</p>
-        <p class="font-mono font-semibold text-sm text-gold">${formatPrice(sig.symbol, sig.entry)}</p>
-      </div>
-      <div class="bg-surface2 rounded-lg p-2.5">
-        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">โซนเป้าหมาย</p>
-        <p class="font-mono font-semibold text-sm text-goldSoft">${formatPrice(sig.symbol, sig.tp)}</p>
-      </div>
-      <div class="bg-surface2 rounded-lg p-2.5">
-        <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">โซนความเสี่ยง</p>
-        <p class="font-mono font-semibold text-sm text-t2">${formatPrice(sig.symbol, sig.sl)}</p>
-      </div>
-    </div>
-    
-    ${closedInfo}
-    
-    <p class="text-xs bg-goldBg text-goldSoft p-3 rounded-lg mb-3 flex items-start gap-2 border border-goldDim/50 leading-relaxed">
-      <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-      <span>${sig.reason}</span>
-    </p>
-    
-    <footer class="flex items-center justify-between pt-3 border-t border-line flex-wrap gap-2">
-      <div class="flex gap-1.5 flex-wrap">
-        ${reactionsHtml}
-        <button class="react-btn bg-surface2 px-2.5 py-1 rounded-full text-xs border border-line">+</button>
-      </div>
-      <div class="flex items-center gap-2">
-        ${viewerStack ? `<div class="flex items-center">${viewerStack}</div>` : ''}
-        <span class="text-xs text-t2 flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-          </svg>
-          ${sig.viewers} ${sig.status === 'active' ? 'viewing' : 'viewed'}
-        </span>
-      </div>
-    </footer>
-  `;
-  
-  return card;
-}
-
-function loadTradingViewChart(sig) {
-  if (!sig.showChart || typeof TradingView === 'undefined') return;
-  // The gate may have replaced the body (login / no-sub screen) — skip if gone.
-  if (!document.getElementById(`tv-${sig.id}`)) return;
-
-  new TradingView.widget({
-    container_id: `tv-${sig.id}`,
-    symbol: sig.tvSymbol,
-    interval: sig.timeframe,
-    timezone: 'Asia/Bangkok',
-    theme: 'dark',
-    style: '1',
-    locale: 'th',
-    toolbar_bg: '#131722',
-    hide_top_toolbar: true,
-    hide_side_toolbar: true,
-    hide_legend: false,
-    save_image: false,
-    allow_symbol_change: false,
-    details: false,
-    autosize: true,
-    studies: ['MAExp@tv-basicstudies'],
+      <div class="flex items-center justify-between">
+        ${viewTagSm(a.view)}
+        <span class="text-gold text-[11px] tracking-wider">${stars(a.confidence)}</span>
+      </div>`;
+    el.addEventListener('click', () => { state.selected = a.id; renderList(); renderDetail(); showDetailMobile(); });
+    listEl.appendChild(el);
   });
 }
 
-const feed = document.getElementById('signal-feed');
-MOCK_SIGNALS.forEach(sig => {
-  feed.appendChild(renderSignal(sig));
-});
+function loadDetailChart(a) {
+  const host = document.getElementById('tv-detail');
+  if (!host || typeof TradingView === 'undefined') return;
+  host.innerHTML = '';
+  new TradingView.widget({
+    container_id: 'tv-detail',
+    symbol: a.tvSymbol, interval: a.timeframe,
+    timezone: 'Asia/Bangkok', theme: 'dark', style: '1', locale: 'th',
+    toolbar_bg: '#131722', hide_top_toolbar: true, hide_side_toolbar: true,
+    hide_legend: false, save_image: false, allow_symbol_change: false,
+    details: false, autosize: true, studies: ['MAExp@tv-basicstudies'],
+  });
+}
 
-setTimeout(() => {
-  MOCK_SIGNALS.forEach(loadTradingViewChart);
-}, 100);
+function renderDetail() {
+  const a = byId[state.selected];
+  if (!a) { detailEl.innerHTML = ''; return; }
+  detailEl.innerHTML = `
+    <div class="fade-in">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-11 h-11 rounded-xl bg-gold text-bg flex items-center justify-center font-mono font-bold flex-shrink-0">${a.symbol.slice(0,3)}</div>
+          <div class="min-w-0">
+            <h2 class="font-mono text-xl font-semibold text-warm leading-none">${a.symbol}</h2>
+            <p class="text-[11px] text-t3 mt-1">บทวิเคราะห์ · M${a.timeframe} · ${a.timeAgo}</p>
+          </div>
+        </div>
+        ${viewTagLg(a.view)}
+      </div>
 
-document.getElementById('enable-push').addEventListener('click', async () => {
-  if (!('Notification' in window)) {
-    alert('เบราว์เซอร์นี้ยังไม่รองรับการแจ้งเตือน');
-    return;
-  }
-  const perm = await Notification.requestPermission();
-  if (perm === 'granted') {
-    new Notification('AURUM Analysis', {
-      body: 'เปิดการแจ้งเตือนเรียบร้อย — คุณจะได้รับบทวิเคราะห์ใหม่ทันที',
-      icon: '/icon-192.png',
-    });
-    document.getElementById('enable-push').textContent = '✓ เปิดแล้ว';
-    document.getElementById('enable-push').classList.add('bg-up', 'text-white');
-    document.getElementById('enable-push').classList.remove('bg-gold', 'text-bg');
-  }
-});
+      <h3 class="serif-h text-warm text-2xl sm:text-[26px] leading-tight mb-3">${a.title}</h3>
 
+      <div class="tv-wrap mb-4" style="height: 360px;"><div id="tv-detail" style="height:100%;width:100%;"></div></div>
+
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-surface border border-line rounded-xl p-3 text-center">
+          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">มุมมอง</p>
+          <p class="text-sm font-semibold ${a.view==='bullish'?'text-gold':'text-bear'}">${a.view==='bullish'?'ขาขึ้น':'ขาลง'}</p>
+        </div>
+        <div class="bg-surface border border-line rounded-xl p-3 text-center">
+          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">อัตราส่วน</p>
+          <p class="text-sm font-mono font-semibold text-warm">${a.ratio}</p>
+        </div>
+        <div class="bg-surface border border-line rounded-xl p-3 text-center">
+          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">ความเชื่อมั่น</p>
+          <p class="text-sm text-gold tracking-wider">${stars(a.confidence)}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-goldBg border border-goldDim rounded-xl p-3">
+          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">จุดสำคัญ</p>
+          <p class="font-mono font-semibold text-base text-gold">${a.keyLevel}</p>
+        </div>
+        <div class="bg-surface2 border border-line rounded-xl p-3">
+          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">โซนเป้าหมาย</p>
+          <p class="font-mono font-semibold text-base text-goldSoft">${a.targetZone}</p>
+        </div>
+        <div class="bg-surface2 border border-line rounded-xl p-3">
+          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">โซนความเสี่ยง</p>
+          <p class="font-mono font-semibold text-base ${a.view==='bearish'?'text-bear':'text-warmDim'}">${a.riskZone}</p>
+        </div>
+      </div>
+
+      <p class="text-sm text-warmDim leading-relaxed bg-bg/40 border border-line/60 rounded-xl p-4">${a.note}</p>
+    </div>`;
+  loadDetailChart(a);
+}
+
+/* Filters */
+document.getElementById('f-symbol').addEventListener('change', e => { state.symbol = e.target.value; renderList(); renderDetail(); });
+document.getElementById('f-sort').addEventListener('change', e => { state.sort = e.target.value; renderList(); });
+document.querySelectorAll('.conf-btn').forEach(btn => btn.addEventListener('click', () => {
+  state.conf = Number(btn.dataset.conf);
+  document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('bg-gold','text-bg','border-gold'));
+  btn.classList.add('bg-gold','text-bg','border-gold');
+  renderList(); renderDetail();
+}));
+document.querySelector('.conf-btn').classList.add('bg-gold','text-bg','border-gold');
+
+/* Mobile tabs */
+const tabList = document.getElementById('tab-list');
+const tabDetail = document.getElementById('tab-detail');
+const paneList = document.getElementById('pane-list');
+const paneDetail = document.getElementById('pane-detail');
+function activateTab(which) {
+  const showList = which === 'list';
+  paneList.classList.toggle('hidden', !showList);
+  paneList.classList.toggle('flex', showList);
+  paneDetail.classList.toggle('hidden', showList);
+  paneDetail.classList.toggle('flex', !showList);
+  tabList.classList.toggle('text-gold', showList);
+  tabList.classList.toggle('border-gold', showList);
+  tabList.classList.toggle('text-warmDim', !showList);
+  tabList.classList.toggle('border-transparent', !showList);
+  tabDetail.classList.toggle('text-gold', !showList);
+  tabDetail.classList.toggle('border-gold', !showList);
+  tabDetail.classList.toggle('text-warmDim', showList);
+  tabDetail.classList.toggle('border-transparent', showList);
+}
+tabList.addEventListener('click', () => activateTab('list'));
+tabDetail.addEventListener('click', () => activateTab('detail'));
+function showDetailMobile() { if (window.matchMedia('(max-width: 767px)').matches) activateTab('detail'); }
+
+renderList();
+renderDetail();
 </script>
 
 </body>
