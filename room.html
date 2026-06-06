@@ -28,6 +28,9 @@ tailwind.config = {
         goldBg: '#241a0d',
         bear: '#f23645',
         bearBg: '#2a0d12',
+        ok: '#22c55e',
+        okBg: '#0d2417',
+        warn: '#f5c451',
         warm: '#f5e8c7',
         warmDim: '#c9b896',
         t2: '#a99fc4',
@@ -64,6 +67,42 @@ body {
 .list-item.active .item-bar { opacity: 1; }
 .item-bar { opacity: 0; }
 select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23c9b896' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; background-size: 14px; -webkit-appearance: none; appearance: none; }
+
+/* Pending (unconfirmed) pulse + new-arrival highlight + confirm glow */
+.pending-dot { animation: pulse 1.1s infinite; }
+@keyframes slideInTop { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+.row-new { animation: slideInTop 0.4s ease-out, goldFade 3s ease-out forwards; }
+@keyframes goldFade {
+  0% { background: rgba(212,175,55,0.28); border-color: #d4af37; }
+  100% { background: rgba(22,10,46,1); border-color: #2c1a4a; }
+}
+.confirm-glow { animation: confirmGlow 1.6s ease-out; }
+@keyframes confirmGlow {
+  0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.0); }
+  30% { box-shadow: 0 0 0 2px rgba(34,197,94,0.6), 0 0 18px rgba(34,197,94,0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+
+/* Annotation panel */
+.anno-panel { border: 1px solid #2c1a4a; border-radius: 16px; background:
+  linear-gradient(180deg, rgba(36,26,13,0.35), rgba(22,10,46,0.2)); }
+.anno-label { letter-spacing: 0.06em; }
+.zone-dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+
+/* Toast */
+#toast-wrap { position: fixed; top: 14px; right: 14px; z-index: 60; display: flex; flex-direction: column; gap: 10px; width: 320px; max-width: calc(100vw - 28px); pointer-events: none; }
+.toast { pointer-events: auto; animation: toastIn 0.35s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+.toast.out { animation: toastOut 0.3s ease forwards; }
+@keyframes toastOut { to { opacity: 0; transform: translateX(24px); } }
+.toast-pulse { animation: toastPulse 1.6s ease-in-out infinite; }
+@keyframes toastPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.0), 0 8px 30px -10px rgba(0,0,0,0.6); }
+  50% { box-shadow: 0 0 0 3px rgba(212,175,55,0.18), 0 8px 30px -10px rgba(0,0,0,0.6); }
+}
+@media (max-width: 767px) {
+  #toast-wrap { top: auto; bottom: 14px; right: 12px; left: 12px; width: auto; }
+}
 
 /* ---- Access gate screens (login / no-subscription) ---- */
 .gate-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -311,7 +350,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 })();
 </script>
 
-<!-- ============================ VARIANT C — Dashboard ============================ -->
+<!-- ================ VARIANT C — Pro Dashboard (Phase 2) ================ -->
 
 <div class="h-screen flex flex-col max-w-7xl mx-auto">
 
@@ -329,22 +368,31 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
         </p>
       </div>
     </div>
-    <!-- Expiry banner — keep IDs for renderExpiry() -->
-    <div class="flex items-center gap-2 text-sm bg-goldBg border border-goldDim rounded-lg px-3 py-1.5">
-      <svg class="w-4 h-4 text-goldSoft flex-shrink-0 hidden sm:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <span class="text-goldSoft text-xs">
-        เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
-        <span id="room-expiry-date" class="text-t3 text-xs hidden md:inline">· หมดอายุ —</span>
-      </span>
-      <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap ml-1">ต่ออายุ</button>
+    <div class="flex items-center gap-2">
+      <!-- Sound toggle -->
+      <button id="sound-toggle" title="เสียงแจ้งเตือน" class="w-9 h-9 rounded-lg border border-line bg-surface flex items-center justify-center text-warmDim hover:text-gold hover:border-goldDim transition">
+        <svg id="sound-on-icon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 00-2.5-4.03v8.05A4.5 4.5 0 0016.5 12zM14 3.23v2.06a7 7 0 010 13.42v2.06A9 9 0 0014 3.23z"/></svg>
+        <svg id="sound-off-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.59 2L19 9.41 17.59 8 15 10.59 12.41 8 11 9.41 13.59 12 11 14.59 12.41 16 15 13.41 17.59 16 19 14.59 16.41 12z"/></svg>
+      </button>
+      <!-- Expiry banner — keep IDs for renderExpiry() -->
+      <div class="flex items-center gap-2 text-sm bg-goldBg border border-goldDim rounded-lg px-3 py-1.5">
+        <svg class="w-4 h-4 text-goldSoft flex-shrink-0 hidden sm:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span class="text-goldSoft text-xs">
+          เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
+          <span id="room-expiry-date" class="text-t3 text-xs hidden md:inline">· หมดอายุ —</span>
+        </span>
+        <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap ml-1">ต่ออายุ</button>
+      </div>
     </div>
   </header>
 
   <!-- Mobile tabs -->
   <div class="md:hidden flex-shrink-0 flex border-b border-line bg-bg/60">
-    <button id="tab-list" class="flex-1 py-2.5 text-sm font-medium text-gold border-b-2 border-gold">รายการ</button>
+    <button id="tab-list" class="flex-1 py-2.5 text-sm font-medium text-gold border-b-2 border-gold relative">
+      รายการ <span id="tab-unread" class="hidden absolute top-1.5 ml-1 text-[9px] bg-gold text-bg font-bold px-1.5 rounded-full">0</span>
+    </button>
     <button id="tab-detail" class="flex-1 py-2.5 text-sm font-medium text-warmDim border-b-2 border-transparent">รายละเอียด</button>
   </div>
 
@@ -367,13 +415,19 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
             <option value="old">เก่าสุดก่อน</option>
           </select>
         </div>
-        <div class="flex items-center gap-1.5 text-[11px] text-warmDim">
-          <span class="mr-1">ความเชื่อมั่น</span>
-          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim active:scale-95" data-conf="0">ทั้งหมด</button>
-          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="3">3★+</button>
-          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="4">4★+</button>
-          <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="5">5★</button>
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 text-[11px] text-warmDim">
+            <span class="mr-0.5">ความเชื่อมั่น</span>
+            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="0">ทั้งหมด</button>
+            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="3">3★+</button>
+            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="4">4★+</button>
+            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="5">5★</button>
+          </div>
         </div>
+        <button id="simulate-btn" class="w-full text-[11px] text-goldSoft bg-goldBg border border-goldDim rounded-lg py-1.5 hover:bg-goldDim hover:text-bg transition flex items-center justify-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+          จำลองบทวิเคราะห์ใหม่ (เดโม)
+        </button>
       </div>
       <!-- List -->
       <div id="list" class="flex-1 min-h-0 overflow-y-auto scroll-y p-2 space-y-1.5"></div>
@@ -387,64 +441,150 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   </div>
 </div>
 
+<!-- Toast container -->
+<div id="toast-wrap" aria-live="polite"></div>
+
 <script src="https://s3.tradingview.com/tv.js"></script>
 <script>
-/* Mock data only — replace with a live Supabase feed when the backend is ready. */
+/* =====================================================================
+   Phase 2 — mock data + annotation panel + real-time alert system.
+   Backend wiring (Supabase Realtime on analysis_posts) lands in Phase 3;
+   the handlers below (handleInsert / handleConfirm) are the exact hooks
+   the real subscription will call. See subscribeRealtime() stub.
+   ===================================================================== */
+
+const TF_INTERVAL = { M5: '5', M15: '15', M30: '30', H1: '60', H4: '240' };
+const TV_SYMBOL = { XAUUSD: 'OANDA:XAUUSD', EURUSD: 'FX:EURUSD', BTCUSD: 'BITSTAMP:BTCUSD' };
+const META = { weekCount: 40 }; // หน้าสรุปสัปดาห์ (เดโม) — Phase 3 จะดึงจริง
+
+/* Each item mirrors a row of analysis_posts (see sql/2026_06_06_analysis_posts.sql). */
 const SAMPLE_ANALYSES = [
-  { id:'an-001', symbol:'XAUUSD', tvSymbol:'OANDA:XAUUSD', view:'bullish', timeframe:'15', minsAgo:2, timeAgo:'2 นาทีที่แล้ว', confidence:4, ratio:'1:1.7', keyLevel:'2,645.50', targetZone:'2,655.00', riskZone:'2,640.00',
-    title:'ทองคำยืนเหนือจุดสำคัญ มุมมองขาขึ้นระยะสั้น',
-    note:'ราคากวาดสภาพคล่องบริเวณ M15 และยืนเหนือจุดสำคัญได้อย่างมั่นคง มุมมองยังเป็นขาขึ้น รอจังหวะย่อตัวเข้าหาโซนแนวรับเพื่อยืนยันโครงสร้างก่อนเดินหน้าทดสอบโซนเป้าหมายด้านบน' },
-  { id:'an-002', symbol:'EURUSD', tvSymbol:'FX:EURUSD', view:'bearish', timeframe:'30', minsAgo:24, timeAgo:'24 นาทีที่แล้ว', confidence:5, ratio:'1:1.5', keyLevel:'1.08450', targetZone:'1.08150', riskZone:'1.08650',
+  { id:'an-001', symbol:'XAUUSD', timeframe:'M15', minsAgo:0, view:'bearish', confidence:4, rewardRatio:1.7,
+    keyLevel:4468.53, currentPrice:4468.20, riskLevel:4478.41,
+    targetZones:[{level:4462.60,hit:false},{level:4456.67,hit:false},{level:4450.74,hit:false}],
+    confirmed:false,
+    stats:[{label:'Z1',pct:67,count:340},{label:'Z2',pct:44,count:224},{label:'Z3',pct:32,count:164}],
+    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:5.13,
+    title:'ทองคำแตะระดับสำคัญ มุมมองขาลงระยะสั้น',
+    note:'ราคาขึ้นทดสอบจุดสำคัญบริเวณ 4,468 แล้วเริ่มอ่อนแรง มุมมองขาลงระยะสั้นเข้าหาโซนเป้าหมายด้านล่าง ระดับความเสี่ยงอยู่เหนือจุดสำคัญ บริหารความเสี่ยงสำคัญที่สุด' },
+
+  { id:'an-002', symbol:'EURUSD', timeframe:'M30', minsAgo:24, view:'bearish', confidence:5, rewardRatio:1.5,
+    keyLevel:1.08450, currentPrice:1.08512, riskLevel:1.08650,
+    targetZones:[{level:1.08300,hit:true},{level:1.08150,hit:false},{level:1.08000,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-06T11:30:00Z',
+    stats:[{label:'Z1',pct:71,count:512},{label:'Z2',pct:49,count:353},{label:'Z3',pct:30,count:216}],
+    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:7.42,
     title:'ยูโรปฏิเสธแนวต้าน มุมมองขาลงมีน้ำหนัก',
-    note:'แนวต้านบริเวณ 1.0850 ปฏิเสธราคาชัดเจน มุมมองขาลงมีน้ำหนัก ตราบใดที่ราคายังอยู่ใต้จุดสำคัญ โซนเป้าหมายถัดไปอยู่ที่แนวรับด้านล่าง' },
-  { id:'an-003', symbol:'BTCUSD', tvSymbol:'BITSTAMP:BTCUSD', view:'bullish', timeframe:'60', minsAgo:60, timeAgo:'1 ชั่วโมงที่แล้ว', confidence:3, ratio:'1:2.0', keyLevel:'96,420', targetZone:'98,000', riskZone:'95,600',
+    note:'แนวต้านบริเวณ 1.0850 ปฏิเสธราคาชัดเจน มุมมองขาลงมีน้ำหนักตราบใดที่ยังอยู่ใต้จุดสำคัญ โซนเป้าหมายแรกถูกแตะแล้ว' },
+
+  { id:'an-003', symbol:'BTCUSD', timeframe:'H1', minsAgo:60, view:'bullish', confidence:3, rewardRatio:2.0,
+    keyLevel:96420, currentPrice:96380, riskLevel:95600,
+    targetZones:[{level:97200,hit:false},{level:98000,hit:false},{level:98800,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-06T11:00:00Z',
+    stats:[{label:'Z1',pct:58,count:288},{label:'Z2',pct:39,count:194},{label:'Z3',pct:24,count:121}],
+    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.05,
     title:'บิตคอยน์ทำจุดต่ำยกตัว โครงสร้างขาขึ้นเชิงรอบ',
-    note:'โครงสร้าง H1 ยังคงทำจุดสูงและจุดต่ำยกตัวขึ้น มุมมองขาขึ้นเชิงรอบ ความเชื่อมั่นปานกลางเพราะใกล้โซนแนวต้านสำคัญ ติดตามการทะลุอย่างใกล้ชิด' },
-  { id:'an-004', symbol:'XAUUSD', tvSymbol:'OANDA:XAUUSD', view:'bearish', timeframe:'5', minsAgo:120, timeAgo:'2 ชั่วโมงที่แล้ว', confidence:3, ratio:'1:1.4', keyLevel:'2,662.00', targetZone:'2,652.00', riskZone:'2,667.00',
-    title:'ทองคำแตะโซนความเสี่ยง ปรับฐานระยะสั้น',
-    note:'ภาพระยะสั้น M5 ราคาแตะโซนความเสี่ยงด้านบนแล้วเริ่มอ่อนแรง มุมมองขาลงระยะสั้นเพื่อปรับฐาน บริหารความเสี่ยงเป็นเรื่องสำคัญที่สุด' },
-  { id:'an-005', symbol:'EURUSD', tvSymbol:'FX:EURUSD', view:'bullish', timeframe:'240', minsAgo:240, timeAgo:'4 ชั่วโมงที่แล้ว', confidence:4, ratio:'1:2.3', keyLevel:'1.07900', targetZone:'1.08600', riskZone:'1.07550',
+    note:'โครงสร้าง H1 ยังทำจุดสูงและจุดต่ำยกตัว มุมมองขาขึ้นเชิงรอบ ความเชื่อมั่นปานกลางเพราะใกล้แนวต้านสำคัญ' },
+
+  { id:'an-004', symbol:'XAUUSD', timeframe:'M5', minsAgo:120, view:'bearish', confidence:3, rewardRatio:1.4,
+    keyLevel:4475.00, currentPrice:4470.10, riskLevel:4480.00,
+    targetZones:[{level:4470.00,hit:true},{level:4465.00,hit:true},{level:4460.00,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-06T10:00:00Z',
+    stats:[{label:'Z1',pct:64,count:301},{label:'Z2',pct:41,count:198},{label:'Z3',pct:28,count:139}],
+    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:6.88,
+    title:'ทองคำปรับฐานระยะสั้นใต้แนวต้าน',
+    note:'ภาพ M5 ราคาอ่อนแรงใต้แนวต้าน มุมมองขาลงระยะสั้นเพื่อปรับฐาน สองโซนเป้าหมายแรกถูกแตะแล้ว' },
+
+  { id:'an-005', symbol:'EURUSD', timeframe:'H4', minsAgo:240, view:'bullish', confidence:4, rewardRatio:2.3,
+    keyLevel:1.07900, currentPrice:1.07965, riskLevel:1.07550,
+    targetZones:[{level:1.08200,hit:true},{level:1.08600,hit:false},{level:1.09000,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-06T08:00:00Z',
+    stats:[{label:'Z1',pct:69,count:430},{label:'Z2',pct:46,count:286},{label:'Z3',pct:31,count:193}],
+    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:3.74,
     title:'ยูโรสะสมกำลังเหนือจุดสำคัญ H4',
-    note:'กรอบ H4 ราคายืนเหนือจุดสำคัญและสร้างฐานสะสมกำลัง มุมมองขาขึ้นเชิงโครงสร้าง อัตราส่วนน่าสนใจหากราคารักษาระดับเหนือโซนแนวรับได้' },
-  { id:'an-006', symbol:'BTCUSD', tvSymbol:'BITSTAMP:BTCUSD', view:'bearish', timeframe:'15', minsAgo:360, timeAgo:'6 ชั่วโมงที่แล้ว', confidence:2, ratio:'1:1.3', keyLevel:'97,800', targetZone:'96,500', riskZone:'98,400',
+    note:'กรอบ H4 ราคายืนเหนือจุดสำคัญและสร้างฐานสะสมกำลัง มุมมองขาขึ้นเชิงโครงสร้าง อัตราส่วนน่าสนใจ' },
+
+  { id:'an-006', symbol:'BTCUSD', timeframe:'M15', minsAgo:360, view:'bearish', confidence:2, rewardRatio:1.3,
+    keyLevel:97800, currentPrice:97910, riskLevel:98400,
+    targetZones:[{level:97000,hit:true},{level:96500,hit:false},{level:96000,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-06T06:00:00Z',
+    stats:[{label:'Z1',pct:55,count:240},{label:'Z2',pct:36,count:151},{label:'Z3',pct:22,count:97}],
+    market:{emoji:'🔴',th:'ผันผวนสูง',en:'volatile'}, volatility:9.21,
     title:'บิตคอยน์ชะลอใต้แนวต้าน มุมมองขาลงระยะสั้น',
-    note:'ภาพ M15 ราคาชะลอตัวใต้แนวต้านและเริ่มสร้างจุดสูงที่ต่ำลง มุมมองขาลงระยะสั้น ความเชื่อมั่นไม่สูงเพราะแนวโน้มใหญ่ยังไม่เปลี่ยน' },
-  { id:'an-007', symbol:'XAUUSD', tvSymbol:'OANDA:XAUUSD', view:'bullish', timeframe:'60', minsAgo:480, timeAgo:'8 ชั่วโมงที่แล้ว', confidence:5, ratio:'1:2.5', keyLevel:'2,630.00', targetZone:'2,660.00', riskZone:'2,618.00',
+    note:'ภาพ M15 ราคาชะลอตัวใต้แนวต้านและทำจุดสูงต่ำลง มุมมองขาลงระยะสั้น ความเชื่อมั่นไม่สูงเพราะแนวโน้มใหญ่ยังไม่เปลี่ยน' },
+
+  { id:'an-007', symbol:'XAUUSD', timeframe:'H1', minsAgo:480, view:'bullish', confidence:5, rewardRatio:2.5,
+    keyLevel:4430.00, currentPrice:4432.40, riskLevel:4418.00,
+    targetZones:[{level:4445.00,hit:true},{level:4460.00,hit:true},{level:4475.00,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-06T04:00:00Z',
+    stats:[{label:'Z1',pct:73,count:560},{label:'Z2',pct:52,count:401},{label:'Z3',pct:35,count:268}],
+    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.62,
     title:'ทองคำสร้างฐานใหญ่ มุมมองขาขึ้นเชิงโครงสร้าง',
-    note:'กรอบ H1 ราคาสร้างฐานสะสมเหนือจุดสำคัญและเริ่มทำจุดสูงยกตัว มุมมองขาขึ้นเชิงโครงสร้าง ความเชื่อมั่นสูง อัตราส่วนน่าสนใจหากยืนเหนือโซนแนวรับได้' },
-  { id:'an-008', symbol:'EURUSD', tvSymbol:'FX:EURUSD', view:'bearish', timeframe:'15', minsAgo:600, timeAgo:'10 ชั่วโมงที่แล้ว', confidence:3, ratio:'1:1.6', keyLevel:'1.08200', targetZone:'1.07950', riskZone:'1.08360',
-    title:'ยูโรอ่อนแรงใต้จุดสำคัญ มุมมองขาลงระยะสั้น',
-    note:'ภาพ M15 ราคาหลุดจุดสำคัญและรีเทสต์ไม่ผ่าน มุมมองขาลงระยะสั้น โซนเป้าหมายอยู่ที่แนวรับถัดไป บริหารความเสี่ยงเหนือจุดสำคัญ' },
+    note:'กรอบ H1 ราคาสร้างฐานสะสมเหนือจุดสำคัญและทำจุดสูงยกตัว มุมมองขาขึ้นเชิงโครงสร้าง ความเชื่อมั่นสูง' },
+
+  { id:'an-008', symbol:'EURUSD', timeframe:'M15', minsAgo:600, view:'bearish', confidence:3, rewardRatio:1.6,
+    keyLevel:1.08200, currentPrice:1.08240, riskLevel:1.08360,
+    targetZones:[{level:1.07950,hit:true},{level:1.07800,hit:true},{level:1.07650,hit:true}],
+    confirmed:true, confirmedAt:'2026-06-06T02:00:00Z',
+    stats:[{label:'Z1',pct:66,count:318},{label:'Z2',pct:43,count:205},{label:'Z3',pct:29,count:140}],
+    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:6.05,
+    title:'ยูโรอ่อนแรงใต้จุดสำคัญ ครบทุกโซนเป้าหมาย',
+    note:'ภาพ M15 ราคาหลุดจุดสำคัญและรีเทสต์ไม่ผ่าน มุมมองขาลงเดินครบทั้งสามโซนเป้าหมาย เป็นรอบที่สมบูรณ์' },
+
+  { id:'an-009', symbol:'BTCUSD', timeframe:'H4', minsAgo:720, view:'bullish', confidence:4, rewardRatio:2.1,
+    keyLevel:94500, currentPrice:94720, riskLevel:93200,
+    targetZones:[{level:96000,hit:true},{level:97500,hit:false},{level:99000,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-05T22:00:00Z',
+    stats:[{label:'Z1',pct:62,count:355},{label:'Z2',pct:42,count:241},{label:'Z3',pct:27,count:155}],
+    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.88,
+    title:'บิตคอยน์ยืนเหนือฐาน H4 มุมมองขาขึ้นรอบใหม่',
+    note:'กรอบ H4 ราคายืนเหนือจุดสำคัญและเริ่มรอบขาขึ้นใหม่ โซนเป้าหมายแรกถูกแตะแล้ว อัตราส่วนน่าสนใจ' },
+
+  { id:'an-010', symbol:'XAUUSD', timeframe:'M30', minsAgo:900, view:'bearish', confidence:3, rewardRatio:1.5,
+    keyLevel:4490.00, currentPrice:4486.30, riskLevel:4498.00,
+    targetZones:[{level:4480.00,hit:true},{level:4472.00,hit:false},{level:4464.00,hit:false}],
+    confirmed:true, confirmedAt:'2026-06-05T20:00:00Z',
+    stats:[{label:'Z1',pct:60,count:277},{label:'Z2',pct:40,count:184},{label:'Z3',pct:26,count:120}],
+    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:6.31,
+    title:'ทองคำย่อจากแนวต้าน M30 มุมมองขาลง',
+    note:'ภาพ M30 ราคาย่อจากแนวต้านบริเวณจุดสำคัญ มุมมองขาลงเข้าหาโซนเป้าหมาย ระดับความเสี่ยงเหนือจุดสำคัญ' },
 ];
 
+/* Runtime state */
+let POSTS = SAMPLE_ANALYSES.map(a => ({ ...a, unread: false, isNew: false }));
+let incomingSeq = 100;
+function getById(id) { return POSTS.find(p => p.id === id); }
+
+const state = { symbol: 'all', sort: 'new', conf: 0, selected: POSTS[0].id };
+
+/* ---------- formatting helpers ---------- */
+function fmtLevel(symbol, n) {
+  if (symbol === 'EURUSD') return n.toFixed(5);
+  if (symbol === 'BTCUSD') return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+function nearKey(p) { return Math.abs(p.currentPrice - p.keyLevel) / p.keyLevel <= 0.0005; }
+function todayCount() { return POSTS.filter(p => p.minsAgo < 1440).length; }
 
 function viewTagSm(view) {
-  if (view === 'bullish') {
-    return `<span class="inline-flex items-center gap-0.5 text-gold text-[11px] font-semibold">
-      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>ขาขึ้น</span>`;
-  }
-  return `<span class="inline-flex items-center gap-0.5 text-bear text-[11px] font-semibold">
-    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>ขาลง</span>`;
+  return view === 'bullish'
+    ? `<span class="inline-flex items-center gap-0.5 text-gold text-[11px] font-semibold"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>ขาขึ้น</span>`
+    : `<span class="inline-flex items-center gap-0.5 text-bear text-[11px] font-semibold"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>ขาลง</span>`;
 }
-function viewTagLg(view) {
-  if (view === 'bullish') {
-    return `<span class="inline-flex items-center gap-1 bg-goldBg text-gold text-xs font-semibold px-2.5 py-1 rounded-md border border-goldDim">
-      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>มุมมองขาขึ้น</span>`;
-  }
-  return `<span class="inline-flex items-center gap-1 bg-bearBg text-bear text-xs font-semibold px-2.5 py-1 rounded-md border border-bear/40">
-    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>มุมมองขาลง</span>`;
+function statusChipSm(p) {
+  return p.confirmed
+    ? `<span class="inline-flex items-center gap-1 text-ok text-[10px] font-semibold"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>ยืนยันแล้ว</span>`
+    : `<span class="inline-flex items-center gap-1 text-warn text-[10px] font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-warn pending-dot"></span>กำลังพิจารณา</span>`;
 }
 
-const byId = Object.fromEntries(SAMPLE_ANALYSES.map(a => [a.id, a]));
+/* ---------- left list ---------- */
 const listEl = document.getElementById('list');
 const detailEl = document.getElementById('detail');
-let state = { symbol: 'all', sort: 'new', conf: 0, selected: SAMPLE_ANALYSES[0].id };
 
 function visibleList() {
-  let list = SAMPLE_ANALYSES.filter(a =>
-    (state.symbol === 'all' || a.symbol === state.symbol) && a.confidence >= state.conf);
-  list.sort((x, y) => state.sort === 'new' ? x.minsAgo - y.minsAgo : y.minsAgo - x.minsAgo);
+  let list = POSTS.filter(p => (state.symbol === 'all' || p.symbol === state.symbol) && p.confidence >= state.conf);
+  list.sort((a, b) => state.sort === 'new' ? a.minsAgo - b.minsAgo : b.minsAgo - a.minsAgo);
   return list;
 }
 
@@ -453,35 +593,57 @@ function renderList() {
   listEl.innerHTML = '';
   if (!list.length) {
     listEl.innerHTML = '<p class="text-xs text-t3 text-center py-8">ไม่พบบทวิเคราะห์ตามตัวกรอง</p>';
+    updateUnreadBadge();
     return;
   }
-  if (!list.find(a => a.id === state.selected)) state.selected = list[0].id;
-  list.forEach(a => {
-    const active = a.id === state.selected;
+  if (!list.find(p => p.id === state.selected)) state.selected = list[0].id;
+  list.forEach(p => {
+    const active = p.id === state.selected;
     const el = document.createElement('button');
-    el.className = 'list-item relative w-full text-left bg-surface border border-line rounded-xl p-3 flex flex-col gap-1.5' + (active ? ' active' : '');
+    el.id = 'row-' + p.id;
+    el.className = 'list-item relative w-full text-left bg-surface border border-line rounded-xl p-3 flex flex-col gap-1.5'
+      + (active ? ' active' : '') + (p.isNew ? ' row-new' : '');
     el.innerHTML = `
       <span class="item-bar absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gold"></span>
       <div class="flex items-center justify-between">
-        <span class="font-mono text-sm font-semibold text-warm">${a.symbol}</span>
-        <span class="text-[10px] text-t3 font-mono">${a.timeAgo}</span>
+        <span class="font-mono text-sm font-semibold text-warm flex items-center gap-1.5">${p.symbol}
+          <span class="text-[10px] text-t3 font-sans">${p.timeframe}</span>
+          ${p.unread ? '<span class="text-[9px] bg-gold text-bg font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>' : ''}
+        </span>
+        <span class="text-[10px] text-t3 font-mono">${p.timeAgo || (p.minsAgo + ' นาทีที่แล้ว')}</span>
       </div>
       <div class="flex items-center justify-between">
-        ${viewTagSm(a.view)}
-        <span class="text-gold text-[11px] tracking-wider">${stars(a.confidence)}</span>
+        ${viewTagSm(p.view)}
+        <span class="text-gold text-[11px] tracking-wider">${stars(p.confidence)}</span>
+      </div>
+      <div class="flex items-center justify-between">
+        ${statusChipSm(p)}
+        <span class="text-[10px] text-t3 font-mono">อัตราส่วน 1:${p.rewardRatio}</span>
       </div>`;
-    el.addEventListener('click', () => { state.selected = a.id; renderList(); renderDetail(); showDetailMobile(); });
+    el.addEventListener('click', () => selectPost(p.id));
     listEl.appendChild(el);
   });
+  updateUnreadBadge();
 }
 
-function loadDetailChart(a) {
+function selectPost(id) {
+  const p = getById(id);
+  if (p) { p.unread = false; p.isNew = false; }
+  state.selected = id;
+  renderList();
+  renderDetail();
+  if (window.matchMedia('(max-width: 767px)').matches) activateTab('detail');
+}
+
+/* ---------- right detail + annotation panel ---------- */
+function loadDetailChart(p) {
   const host = document.getElementById('tv-detail');
   if (!host || typeof TradingView === 'undefined') return;
   host.innerHTML = '';
   new TradingView.widget({
     container_id: 'tv-detail',
-    symbol: a.tvSymbol, interval: a.timeframe,
+    symbol: TV_SYMBOL[p.symbol] || ('OANDA:' + p.symbol),
+    interval: TF_INTERVAL[p.timeframe] || '15',
     timezone: 'Asia/Bangkok', theme: 'dark', style: '1', locale: 'th',
     toolbar_bg: '#131722', hide_top_toolbar: true, hide_side_toolbar: true,
     hide_legend: false, save_image: false, allow_symbol_change: false,
@@ -489,62 +651,276 @@ function loadDetailChart(a) {
   });
 }
 
+function zoneRows(p) {
+  return p.targetZones.map((z, i) => `
+    <div class="flex items-center gap-1.5">
+      <span class="zone-dot ${z.hit ? 'bg-gold' : 'bg-transparent border border-goldDim'}"></span>
+      <span class="text-[11px] text-t3">Z${i + 1}:</span>
+      <span class="font-mono text-[13px] ${z.hit ? 'text-gold' : 'text-goldSoft'}">${fmtLevel(p.symbol, z.level)}</span>
+      ${z.hit ? '<span class="text-[9px] text-gold">✓ ถึงแล้ว</span>' : ''}
+    </div>`).join('');
+}
+
+function statBar(s) {
+  return `<div class="flex items-center gap-2 text-[11px]">
+    <span class="w-[68px] text-warmDim flex-shrink-0">${s.label} ถึงเป้า</span>
+    <span class="w-9 text-right font-mono flex-shrink-0 ${s.pct >= 50 ? 'text-gold' : 'text-warmDim'}">${s.pct}%</span>
+    <span class="flex-1 h-2 rounded-full bg-surface2 overflow-hidden border border-line">
+      <span class="block h-full rounded-full" style="width:${s.pct}%; background:linear-gradient(90deg,#8b7029,#d4af37)"></span>
+    </span>
+    <span class="w-12 text-right text-t3 font-mono flex-shrink-0">${s.count} ครั้ง</span>
+  </div>`;
+}
+
 function renderDetail() {
-  const a = byId[state.selected];
-  if (!a) { detailEl.innerHTML = ''; return; }
+  const p = getById(state.selected);
+  if (!p) { detailEl.innerHTML = ''; return; }
+  const confBadge = p.confirmed
+    ? `<span class="inline-flex items-center gap-1 bg-okBg text-ok border border-ok/40 text-[11px] font-semibold px-2.5 py-1 rounded-full"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>ยืนยันแล้ว</span>`
+    : `<span class="inline-flex items-center gap-1.5 bg-[#2a2410] text-warn border border-warn/40 text-[11px] font-semibold px-2.5 py-1 rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-warn pending-dot"></span>กำลังพิจารณา</span>`;
+  const viewArrow = p.view === 'bullish' ? '▲' : '▼';
+  const viewWord = p.view === 'bullish' ? 'ขาขึ้น' : 'ขาลง';
+  const viewColor = p.view === 'bullish' ? 'text-gold' : 'text-bear';
+
   detailEl.innerHTML = `
     <div class="fade-in">
       <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="w-11 h-11 rounded-xl bg-gold text-bg flex items-center justify-center font-mono font-bold flex-shrink-0">${a.symbol.slice(0,3)}</div>
+          <div class="w-11 h-11 rounded-xl bg-gold text-bg flex items-center justify-center font-mono font-bold flex-shrink-0">${p.symbol.slice(0,3)}</div>
           <div class="min-w-0">
-            <h2 class="font-mono text-xl font-semibold text-warm leading-none">${a.symbol}</h2>
-            <p class="text-[11px] text-t3 mt-1">บทวิเคราะห์ · M${a.timeframe} · ${a.timeAgo}</p>
+            <h2 class="font-mono text-xl font-semibold text-warm leading-none">${p.symbol}</h2>
+            <p class="text-[11px] text-t3 mt-1">บทวิเคราะห์ · ${p.timeframe} · ${p.timeAgo || (p.minsAgo + ' นาทีที่แล้ว')}</p>
           </div>
         </div>
-        ${viewTagLg(a.view)}
+        ${confBadge}
       </div>
 
-      <h3 class="serif-h text-warm text-2xl sm:text-[26px] leading-tight mb-3">${a.title}</h3>
+      <h3 class="serif-h text-warm text-2xl sm:text-[26px] leading-tight mb-3">${p.title}</h3>
 
-      <div class="tv-wrap mb-4" style="height: 360px;"><div id="tv-detail" style="height:100%;width:100%;"></div></div>
+      <div class="tv-wrap mb-4" style="height: 340px;"><div id="tv-detail" style="height:100%;width:100%;"></div></div>
 
-      <div class="grid grid-cols-3 gap-2 mb-4">
-        <div class="bg-surface border border-line rounded-xl p-3 text-center">
-          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">มุมมอง</p>
-          <p class="text-sm font-semibold ${a.view==='bullish'?'text-gold':'text-bear'}">${a.view==='bullish'?'ขาขึ้น':'ขาลง'}</p>
-        </div>
-        <div class="bg-surface border border-line rounded-xl p-3 text-center">
-          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">อัตราส่วน</p>
-          <p class="text-sm font-mono font-semibold text-warm">${a.ratio}</p>
-        </div>
-        <div class="bg-surface border border-line rounded-xl p-3 text-center">
-          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">ความเชื่อมั่น</p>
-          <p class="text-sm text-gold tracking-wider">${stars(a.confidence)}</p>
-        </div>
-      </div>
+      <!-- ===================== ANNOTATION PANEL ===================== -->
+      <section class="anno-panel overflow-hidden mb-4" id="anno-${p.id}">
+        <header class="flex items-center justify-between px-4 py-2.5 border-b border-line bg-bg/30">
+          <span class="anno-label text-[11px] font-semibold text-goldSoft uppercase tracking-widest">ANALYSIS DETAILS · รายละเอียดบทวิเคราะห์</span>
+          <button class="anno-collapse w-7 h-7 rounded-md hover:bg-line flex items-center justify-center text-warmDim md:hidden">
+            <svg class="anno-chev w-4 h-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+        </header>
 
-      <div class="grid grid-cols-3 gap-2 mb-4">
-        <div class="bg-goldBg border border-goldDim rounded-xl p-3">
-          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">จุดสำคัญ</p>
-          <p class="font-mono font-semibold text-base text-gold">${a.keyLevel}</p>
-        </div>
-        <div class="bg-surface2 border border-line rounded-xl p-3">
-          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">โซนเป้าหมาย</p>
-          <p class="font-mono font-semibold text-base text-goldSoft">${a.targetZone}</p>
-        </div>
-        <div class="bg-surface2 border border-line rounded-xl p-3">
-          <p class="text-[10px] text-t3 uppercase tracking-wider mb-1">โซนความเสี่ยง</p>
-          <p class="font-mono font-semibold text-base ${a.view==='bearish'?'text-bear':'text-warmDim'}">${a.riskZone}</p>
-        </div>
-      </div>
+        <div class="anno-body p-4 space-y-4">
+          <!-- summary line -->
+          <div class="flex items-center gap-2 flex-wrap text-[13px]">
+            <span class="font-mono text-warm">📊 ${p.symbol}</span>
+            <span class="text-t3">·</span><span class="text-warmDim">${p.timeframe}</span>
+            <span class="text-t3">·</span><span class="text-warmDim">${p.timeAgo || (p.minsAgo + ' นาทีที่แล้ว')}</span>
+            ${confBadge}
+          </div>
+          <div class="flex items-center gap-x-5 gap-y-1 flex-wrap text-[13px]">
+            <span class="text-warmDim">มุมมอง: <span class="${viewColor} font-semibold">${viewArrow} ${viewWord}</span></span>
+            <span class="text-warmDim">อัตราส่วน: <span class="font-mono text-warm">1:${p.rewardRatio}</span></span>
+            <span class="text-warmDim">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(p.confidence)}</span></span>
+          </div>
 
-      <p class="text-sm text-warmDim leading-relaxed bg-bg/40 border border-line/60 rounded-xl p-4">${a.note}</p>
+          <!-- three boxes -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div class="bg-goldBg border border-goldDim rounded-xl p-3">
+              <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">จุดสำคัญ</p>
+              <p class="font-mono font-semibold text-base text-gold">${fmtLevel(p.symbol, p.keyLevel)}</p>
+              ${nearKey(p) ? '<p class="text-[10px] text-gold mt-1 flex items-center gap-1"><span class="live-dot">◀──</span> ปัจจุบัน</p>' : '<p class="text-[10px] text-t3 mt-1">ราคาปัจจุบัน ' + fmtLevel(p.symbol, p.currentPrice) + '</p>'}
+            </div>
+            <div class="bg-surface2 border border-line rounded-xl p-3">
+              <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">โซนเป้าหมาย</p>
+              <div class="space-y-1">${zoneRows(p)}</div>
+            </div>
+            <div class="bg-bearBg border border-bear/50 rounded-xl p-3">
+              <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">ระดับความเสี่ยง</p>
+              <p class="font-mono font-semibold text-base text-bear">${fmtLevel(p.symbol, p.riskLevel)}</p>
+              <p class="text-[10px] text-warmDim mt-1">ระยะ: <span class="font-mono">${fmtLevel(p.symbol, Math.abs(p.keyLevel - p.riskLevel))}</span></p>
+            </div>
+          </div>
+
+          <!-- historical stats -->
+          <div>
+            <p class="text-[12px] text-warmDim mb-2 flex items-center gap-1.5">📈 อัตราความแม่นยำ · ข้อมูลย้อนหลัง 30 วัน</p>
+            <div class="bg-bg/30 border border-line rounded-xl p-3 space-y-2">
+              ${p.stats.map(statBar).join('')}
+            </div>
+          </div>
+
+          <!-- meta line -->
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-[12px] text-warmDim border-t border-line pt-3">
+            <span>บทวิเคราะห์วันนี้: <span class="text-warm font-mono">${todayCount()}</span> รายการ · สัปดาห์นี้: <span class="text-warm font-mono">${META.weekCount}</span> รายการ</span>
+            <span>สถานะตลาด: ${p.market.emoji} ${p.market.th} (${p.market.en}) · ค่าความผันผวน: <span class="font-mono text-warm">${p.volatility}</span></span>
+          </div>
+        </div>
+      </section>
+
+      <p class="text-sm text-warmDim leading-relaxed bg-bg/40 border border-line/60 rounded-xl p-4">${p.note}</p>
     </div>`;
-  loadDetailChart(a);
+
+  loadDetailChart(p);
+
+  // Collapsible panel on mobile
+  const panel = document.getElementById('anno-' + p.id);
+  const collapseBtn = panel.querySelector('.anno-collapse');
+  if (collapseBtn) collapseBtn.addEventListener('click', () => {
+    const body = panel.querySelector('.anno-body');
+    const chev = panel.querySelector('.anno-chev');
+    const hidden = body.classList.toggle('hidden');
+    chev.style.transform = hidden ? 'rotate(-90deg)' : '';
+  });
 }
 
-/* Filters */
+/* =====================================================================
+   REAL-TIME ALERT SYSTEM
+   ===================================================================== */
+
+/* --- sound (short chime via WebAudio; toggle persisted) --- */
+let soundOn = localStorage.getItem('aurum-sound') === 'on';
+let audioCtx;
+function refreshSoundIcon() {
+  document.getElementById('sound-on-icon').classList.toggle('hidden', !soundOn);
+  document.getElementById('sound-off-icon').classList.toggle('hidden', soundOn);
+}
+function chime() {
+  if (!soundOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    [[880, 0], [1320, 0.12]].forEach(([freq, t]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001, now + t);
+      g.gain.exponentialRampToValueAtTime(0.18, now + t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.4);
+      o.start(now + t); o.stop(now + t + 0.42);
+    });
+  } catch (e) { /* audio unavailable — ignore */ }
+}
+document.getElementById('sound-toggle').addEventListener('click', () => {
+  soundOn = !soundOn;
+  localStorage.setItem('aurum-sound', soundOn ? 'on' : 'off');
+  refreshSoundIcon();
+  if (soundOn) chime();
+});
+refreshSoundIcon();
+
+/* --- toast --- */
+function viewLabel(view) { return view === 'bullish' ? 'มุมมองขาขึ้น' : 'มุมมองขาลง'; }
+function showToast(p) {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast toast-pulse bg-surface border border-goldDim rounded-xl p-3.5 flex gap-3';
+  el.innerHTML = `
+    <div class="w-9 h-9 rounded-lg bg-goldBg border border-goldDim flex items-center justify-center flex-shrink-0 text-gold">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+    </div>
+    <div class="min-w-0 flex-1">
+      <p class="text-sm font-semibold text-warm flex items-center gap-1.5">🔔 บทวิเคราะห์ใหม่</p>
+      <p class="text-xs text-warmDim mt-0.5 truncate">${p.symbol} · ${viewLabel(p.view)} · <span class="font-mono">${fmtLevel(p.symbol, p.keyLevel)}</span></p>
+      <button class="toast-open mt-2 text-xs font-semibold text-gold hover:text-goldSoft">ดูรายละเอียด →</button>
+    </div>
+    <button class="toast-x text-t3 hover:text-warm flex-shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+  wrap.appendChild(el);
+  const dismiss = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
+  const timer = setTimeout(dismiss, 8000);
+  el.querySelector('.toast-x').addEventListener('click', () => { clearTimeout(timer); dismiss(); });
+  el.querySelector('.toast-open').addEventListener('click', () => { clearTimeout(timer); dismiss(); state.symbol = 'all'; document.getElementById('f-symbol').value = 'all'; selectPost(p.id); });
+}
+
+/* --- browser notification --- */
+function maybeRequestNotify() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+}
+function showBrowserNotify(p) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification('AURUM Analysis · บทวิเคราะห์ใหม่', {
+      body: `${p.symbol} · ${viewLabel(p.view)} · จุดสำคัญ ${fmtLevel(p.symbol, p.keyLevel)}`,
+      icon: '/icon-192.png', tag: p.id,
+    });
+    n.onclick = () => { window.focus(); selectPost(p.id); n.close(); };
+  } catch (e) { /* ignore */ }
+}
+
+/* --- unread badge on mobile tab --- */
+function updateUnreadBadge() {
+  const n = POSTS.filter(p => p.unread).length;
+  const badge = document.getElementById('tab-unread');
+  if (!badge) return;
+  badge.textContent = n;
+  badge.classList.toggle('hidden', n === 0);
+}
+
+/* =====================================================================
+   Realtime hooks — the real Supabase subscription (Phase 3) will call
+   these directly from its INSERT / UPDATE callbacks.
+   ===================================================================== */
+function handleInsert(post) {
+  const p = { ...post, unread: true, isNew: true };
+  POSTS.unshift(p);
+  // auto-follow same symbol in the right pane
+  const cur = getById(state.selected);
+  if (cur && cur.symbol === p.symbol) state.selected = p.id;
+  renderList();
+  if (state.selected === p.id) renderDetail();
+  showToast(p);
+  showBrowserNotify(p);
+  chime();
+  setTimeout(() => { p.isNew = false; }, 3000);
+}
+
+function handleConfirm(id) {
+  const p = getById(id);
+  if (!p || p.confirmed) return;
+  p.confirmed = true;
+  p.confirmedAt = new Date().toISOString();
+  renderList();
+  const row = document.getElementById('row-' + id);
+  if (row) { row.classList.add('confirm-glow'); setTimeout(() => row.classList.remove('confirm-glow'), 1700); }
+  if (state.selected === id) renderDetail();
+}
+
+/* Backend wiring stub (Phase 3). Kept inert here — preview uses the demo
+   simulator below. analysis_posts lives in the aurum-customers project. */
+function subscribeRealtime(client) {
+  // client.channel('analysis_posts')
+  //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'analysis_posts' }, ({ new: row }) => handleInsert(mapRow(row)))
+  //   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'analysis_posts' }, ({ new: row }) => { if (row.confirmed) handleConfirm(row.id); })
+  //   .subscribe();
+}
+
+/* --- demo simulator (preview only) --- */
+const DEMO_POOL = [
+  { symbol:'XAUUSD', timeframe:'M15', view:'bullish', confidence:4, rewardRatio:1.8, keyLevel:4472.10, currentPrice:4472.05, riskLevel:4463.40,
+    targetZones:[{level:4480.00,hit:false},{level:4488.00,hit:false},{level:4496.00,hit:false}],
+    stats:[{label:'Z1',pct:68,count:344},{label:'Z2',pct:45,count:228},{label:'Z3',pct:31,count:158}],
+    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.97,
+    title:'ทองคำกลับตัวเหนือจุดสำคัญ มุมมองขาขึ้น',
+    note:'ราคากลับมายืนเหนือจุดสำคัญและเริ่มทำจุดสูงยกตัว มุมมองขาขึ้นระยะสั้นเข้าหาโซนเป้าหมายด้านบน' },
+  { symbol:'BTCUSD', timeframe:'M30', view:'bearish', confidence:3, rewardRatio:1.6, keyLevel:96850, currentPrice:96910, riskLevel:97600,
+    targetZones:[{level:96000,hit:false},{level:95200,hit:false},{level:94400,hit:false}],
+    stats:[{label:'Z1',pct:57,count:266},{label:'Z2',pct:38,count:171},{label:'Z3',pct:25,count:112}],
+    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:7.18,
+    title:'บิตคอยน์ย่อจากแนวต้าน M30 มุมมองขาลง',
+    note:'ราคาย่อจากแนวต้านบริเวณจุดสำคัญ มุมมองขาลงระยะสั้นเข้าหาโซนเป้าหมายด้านล่าง' },
+];
+let demoIdx = 0;
+function simulateIncoming() {
+  const base = DEMO_POOL[demoIdx % DEMO_POOL.length];
+  demoIdx++;
+  const id = 'an-' + (++incomingSeq);
+  handleInsert({ ...base, id, minsAgo: 0, timeAgo: 'เมื่อสักครู่', confirmed: false });
+  // bar closes a few seconds later → non-repaint confirmation
+  setTimeout(() => handleConfirm(id), 4500);
+}
+document.getElementById('simulate-btn').addEventListener('click', simulateIncoming);
+
+/* ---------- filters ---------- */
 document.getElementById('f-symbol').addEventListener('change', e => { state.symbol = e.target.value; renderList(); renderDetail(); });
 document.getElementById('f-sort').addEventListener('change', e => { state.sort = e.target.value; renderList(); });
 document.querySelectorAll('.conf-btn').forEach(btn => btn.addEventListener('click', () => {
@@ -555,7 +931,7 @@ document.querySelectorAll('.conf-btn').forEach(btn => btn.addEventListener('clic
 }));
 document.querySelector('.conf-btn').classList.add('bg-gold','text-bg','border-gold');
 
-/* Mobile tabs */
+/* ---------- mobile tabs ---------- */
 const tabList = document.getElementById('tab-list');
 const tabDetail = document.getElementById('tab-detail');
 const paneList = document.getElementById('pane-list');
@@ -577,10 +953,15 @@ function activateTab(which) {
 }
 tabList.addEventListener('click', () => activateTab('list'));
 tabDetail.addEventListener('click', () => activateTab('detail'));
-function showDetailMobile() { if (window.matchMedia('(max-width: 767px)').matches) activateTab('detail'); }
 
+/* ---------- boot ---------- */
 renderList();
 renderDetail();
+maybeRequestNotify();
+// Phase 3: subscribeRealtime(<aurum-customers client>);
+// Demo: confirm the first (pending) post, then show one incoming alert.
+setTimeout(() => handleConfirm('an-001'), 5000);
+setTimeout(simulateIncoming, 9000);
 </script>
 
 </body>
