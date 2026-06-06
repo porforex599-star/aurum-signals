@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Aurum Analysis · ห้องบทวิเคราะห์สด</title>
-<meta name="theme-color" content="#0a0a0b">
+<meta name="theme-color" content="#0a0420">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -17,23 +17,26 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        bg: '#0a0a0b',
-        surface: '#13131a',
-        surface2: '#1a1a23',
-        line: '#252531',
+        bg: '#0a0420',
+        bg2: '#1a0833',
+        surface: '#160a2e',
+        surface2: '#1e0f3a',
+        line: '#2c1a4a',
         gold: '#d4af37',
         goldSoft: '#e7c66e',
         goldDim: '#8b7029',
-        goldBg: '#1f1a0a',
-        up: '#089981',
-        down: '#f23645',
-        t1: '#e8e8ed',
-        t2: '#9ca3af',
-        t3: '#6b7280',
+        goldBg: '#241a0d',
+        bear: '#f23645',
+        bearBg: '#2a0d12',
+        warm: '#f5e8c7',
+        warmDim: '#c9b896',
+        t2: '#a99fc4',
+        t3: '#7a6f99',
       },
       fontFamily: {
         sans: ['"IBM Plex Sans Thai"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
       }
     }
   }
@@ -41,17 +44,24 @@ tailwind.config = {
 </script>
 
 <style>
-body { background: #0a0a0b; font-feature-settings: "ss01"; }
+body {
+  background: linear-gradient(165deg, #0a0420 0%, #140628 45%, #1a0833 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  font-feature-settings: "ss01";
+}
 .live-dot { animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .tv-wrap { background: #131722; border-radius: 12px; overflow: hidden; }
-.react-btn { transition: background 0.15s; }
-.react-btn:hover { background: #252531; }
 .scroll-y::-webkit-scrollbar { width: 6px; }
-.scroll-y::-webkit-scrollbar-thumb { background: #252531; border-radius: 3px; }
+.scroll-y::-webkit-scrollbar-thumb { background: #2c1a4a; border-radius: 3px; }
 .scroll-y::-webkit-scrollbar-track { background: transparent; }
 .fade-in { animation: fadeIn 0.4s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.serif-h { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; }
+.chart-collapse { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+.chart-collapse.open { max-height: 340px; }
+.bubble { position: relative; }
 
 /* ---- Access gate screens (login / no-subscription) ---- */
 .gate-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -94,7 +104,7 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
 </style>
 </head>
 
-<body class="text-t1 font-sans antialiased min-h-screen">
+<body class="text-warm font-sans antialiased min-h-screen">
 
 <!-- =====================================================================
      Access gate (Option A) — runs before the room renders.
@@ -299,363 +309,215 @@ body { background: #0a0a0b; font-feature-settings: "ss01"; }
 })();
 </script>
 
-<div class="max-w-2xl mx-auto p-3 sm:p-4">
+<!-- ============================ VARIANT A — Telegram feed ============================ -->
 
-<header class="flex justify-between items-center bg-surface rounded-2xl p-3.5 mb-3 border border-line">
-  <div class="flex items-center gap-3">
-    <div class="w-11 h-11 rounded-xl bg-goldBg flex items-center justify-center flex-shrink-0 border border-goldDim">
-      <svg class="w-6 h-6 text-gold" fill="currentColor" viewBox="0 0 24 24">
+<!-- Sticky compact header -->
+<header class="sticky top-0 z-30 backdrop-blur-md bg-bg/80 border-b border-line">
+  <div class="max-w-2xl mx-auto px-3 sm:px-4 py-2.5 flex items-center gap-3">
+    <div class="w-9 h-9 rounded-xl bg-goldBg flex items-center justify-center flex-shrink-0 border border-goldDim">
+      <svg class="w-5 h-5 text-gold" fill="currentColor" viewBox="0 0 24 24">
         <path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/>
       </svg>
     </div>
-    <div>
-      <div class="flex items-center gap-1.5">
-        <h1 class="font-mono tracking-widest text-[15px] font-semibold">AURUM ANALYSIS</h1>
-        <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 1L9 9H1l6.5 5L5 22l7-5 7 5-2.5-8L23 9h-8z"/>
-        </svg>
-      </div>
-      <p class="text-xs text-t2 flex items-center gap-1.5 mt-0.5">
-        <span class="inline-block w-1.5 h-1.5 bg-up rounded-full live-dot"></span>
-        <span>247 members · 12 ออนไลน์</span>
+    <div class="min-w-0 flex-1">
+      <h1 class="serif-h text-gold text-[19px] leading-none font-semibold truncate">AURUM ANALYSIS</h1>
+      <p class="text-[11px] text-t2 flex items-center gap-1.5 mt-1">
+        <span class="inline-block w-1.5 h-1.5 bg-up rounded-full live-dot" style="background:#22c55e"></span>
+        <span>247 members · <span class="text-goldSoft">12 ออนไลน์</span></span>
       </p>
     </div>
+    <button class="bg-goldBg border border-goldDim text-goldSoft text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-goldDim hover:text-bg transition flex-shrink-0">
+      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      <span class="hidden sm:inline">กดติดตาม</span>
+    </button>
   </div>
-  <button class="bg-goldBg border border-goldDim text-goldSoft text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 hover:bg-goldDim hover:text-bg transition">
-    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-    </svg>
-    <span class="hidden sm:inline">กดติดตาม</span>
-  </button>
 </header>
 
-<div class="flex items-center justify-between bg-goldBg border border-goldDim rounded-xl px-4 py-2 mb-3">
-  <div class="flex items-center gap-2 text-sm">
-    <svg class="w-4 h-4 text-goldSoft flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-    </svg>
-    <span class="text-goldSoft text-xs sm:text-sm">
-      เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
-      <span id="room-expiry-date" class="text-t3 text-xs hidden sm:inline">· หมดอายุ —</span>
-    </span>
-  </div>
-  <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap">ต่ออายุ</button>
-</div>
+<main class="max-w-2xl mx-auto px-3 sm:px-4 pt-3 pb-28">
 
-<div class="flex items-center gap-3 bg-surface rounded-xl px-4 py-2.5 mb-3 border border-line">
-  <span class="text-[10px] text-t3 uppercase tracking-widest font-semibold flex-shrink-0">ออนไลน์</span>
-  <div class="flex items-center">
-    <span class="w-6 h-6 rounded-full bg-purple-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">SK</span>
-    <span class="w-6 h-6 rounded-full bg-teal-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">NT</span>
-    <span class="w-6 h-6 rounded-full bg-orange-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">JM</span>
-    <span class="w-6 h-6 rounded-full bg-pink-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">PR</span>
-    <span class="w-6 h-6 rounded-full bg-blue-600 text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5">BC</span>
-    <span class="w-6 h-6 rounded-full bg-gold text-[9px] flex items-center justify-center font-semibold font-mono border-2 border-surface -mr-1.5 text-bg">AR</span>
-    <span class="w-6 h-6 rounded-full bg-surface2 text-[9px] flex items-center justify-center font-semibold text-t2 border border-line">+6</span>
-  </div>
-</div>
-
-<div class="flex items-start gap-2.5 bg-goldBg border border-goldDim rounded-xl px-4 py-3 mb-4">
-  <svg class="w-4 h-4 text-goldSoft flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
-  </svg>
-  <div>
-    <p class="text-sm text-goldSoft font-medium">ยินดีต้อนรับสู่ AURUM Analysis</p>
-    <p class="text-xs text-goldDim mt-0.5 leading-relaxed">ทุกบทวิเคราะห์เป็นเพียงแนวทาง ไม่ใช่คำแนะนำการลงทุน · ตัดสินใจตามดุลพินิจของคุณ · บริหารความเสี่ยงทุกครั้ง</p>
-  </div>
-</div>
-
-<div id="signal-feed">
-  <!-- Analysis cards rendered here by JS -->
-</div>
-
-<div class="bg-surface border-2 border-dashed border-goldDim rounded-2xl p-4 mt-4 flex items-center gap-3 justify-between">
-  <div class="flex items-center gap-3 flex-1 min-w-0">
-    <div class="w-10 h-10 rounded-full bg-goldBg flex items-center justify-center flex-shrink-0">
-      <svg class="w-5 h-5 text-goldSoft" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+  <!-- Expiry banner — keep IDs for renderExpiry() -->
+  <div class="flex items-center justify-between bg-goldBg border border-goldDim rounded-xl px-4 py-2 mb-4">
+    <div class="flex items-center gap-2 text-sm">
+      <svg class="w-4 h-4 text-goldSoft flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
+      <span class="text-goldSoft text-xs sm:text-sm">
+        เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
+        <span id="room-expiry-date" class="text-t3 text-xs hidden sm:inline">· หมดอายุ —</span>
+      </span>
     </div>
-    <div class="min-w-0">
-      <p class="text-sm font-medium">เปิดการแจ้งเตือน</p>
-      <p class="text-xs text-t2 truncate">รับบทวิเคราะห์บนมือถือทันที ไม่พลาดทุกแผน</p>
-    </div>
+    <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap">ต่ออายุ</button>
   </div>
-  <button id="enable-push" class="bg-gold text-bg font-semibold text-sm px-4 py-2 rounded-lg hover:bg-goldSoft transition flex-shrink-0">
-    เปิด
-  </button>
-</div>
 
-</div>
+  <!-- Date divider -->
+  <div class="flex items-center justify-center my-3">
+    <span class="text-[11px] text-t3 bg-surface border border-line rounded-full px-3 py-1">วันนี้</span>
+  </div>
+
+  <!-- Message feed -->
+  <div id="analysis-feed" class="space-y-3"></div>
+
+</main>
+
+<!-- Scroll-to-bottom (jump to newest) -->
+<button id="scroll-bottom" class="fixed bottom-6 right-5 z-30 w-12 h-12 rounded-full bg-gold text-bg shadow-lg shadow-gold/30 flex items-center justify-center hover:bg-goldSoft transition opacity-0 pointer-events-none">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+</button>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
 <script>
-
-const MOCK_SIGNALS = [
+/* Mock data only — replace with a live Supabase feed when the backend is ready. */
+const SAMPLE_ANALYSES = [
   {
-    id: 'sig-001',
-    symbol: 'XAUUSD',
-    tvSymbol: 'OANDA:XAUUSD',
-    direction: 'BUY',
-    entry: 2645.50,
-    tp: 2655.00,
-    sl: 2640.00,
-    rr: '1:1.7',
-    confidence: 4,
-    timeframe: '15',
-    timeAgo: '2 นาทีที่แล้ว',
-    status: 'active',
-    reason: 'Liquidity sweep on M15 + bullish structure confirmed. Watching for a pullback into the key level zone.',
-    reactions: { fire: 24, gem: 18, bolt: 12 },
-    viewers: 47,
-    viewerAvatars: [
-      { initials: 'SK', color: 'bg-purple-600' },
-      { initials: 'NT', color: 'bg-teal-600' },
-      { initials: 'JM', color: 'bg-orange-600' },
-      { initials: 'PR', color: 'bg-pink-600' },
-    ],
-    showChart: true,
+    id: 'an-001', symbol: 'XAUUSD', tvSymbol: 'OANDA:XAUUSD', view: 'bullish',
+    timeframe: '15', timeAgo: '2 นาทีที่แล้ว', confidence: 4, ratio: '1:1.7',
+    keyLevel: '2,645.50', targetZone: '2,655.00', riskZone: '2,640.00',
+    note: 'ราคากวาดสภาพคล่องบริเวณ M15 และยืนเหนือจุดสำคัญได้ มุมมองยังเป็นขาขึ้น รอจังหวะย่อตัวเข้าหาโซนแนวรับเพื่อยืนยันโครงสร้าง',
   },
   {
-    id: 'sig-002',
-    symbol: 'EURUSD',
-    tvSymbol: 'FX:EURUSD',
-    direction: 'SELL',
-    entry: 1.08450,
-    tp: 1.08150,
-    sl: 1.08650,
-    rr: '1:1.5',
-    confidence: 5,
-    timeframe: '30',
-    timeAgo: '47 นาทีที่แล้ว',
-    status: 'hit_tp',
-    closedPips: 30,
-    closedIn: '38 นาที',
-    reason: 'Resistance rejection at 1.0850 confirmed. Target reached cleanly.',
-    reactions: { trophy: 89, fire: 42, rocket: 31 },
-    viewers: 183,
-    showChart: false,
+    id: 'an-002', symbol: 'EURUSD', tvSymbol: 'FX:EURUSD', view: 'bearish',
+    timeframe: '30', timeAgo: '24 นาทีที่แล้ว', confidence: 5, ratio: '1:1.5',
+    keyLevel: '1.08450', targetZone: '1.08150', riskZone: '1.08650',
+    note: 'แนวต้านบริเวณ 1.0850 ปฏิเสธราคาชัดเจน มุมมองขาลงมีน้ำหนัก ตราบใดที่ราคายังอยู่ใต้จุดสำคัญ โซนเป้าหมายถัดไปอยู่ที่แนวรับด้านล่าง',
   },
   {
-    id: 'sig-003',
-    symbol: 'BTCUSD',
-    tvSymbol: 'BITSTAMP:BTCUSD',
-    direction: 'BUY',
-    entry: 96420,
-    tp: 97200,
-    sl: 95950,
-    rr: '1:1.6',
-    confidence: 3,
-    timeframe: '60',
-    timeAgo: '2 ชั่วโมงที่แล้ว',
-    status: 'hit_sl',
-    closedPips: -470,
-    closedIn: '1 ชั่วโมง 12 นาที',
-    reason: 'News-driven spike invalidated the structure. Risk level respected, next view ahead.',
-    reactions: { thinking: 18, broken: 7 },
-    viewers: 94,
-    showChart: false,
+    id: 'an-003', symbol: 'BTCUSD', tvSymbol: 'BITSTAMP:BTCUSD', view: 'bullish',
+    timeframe: '60', timeAgo: '1 ชั่วโมงที่แล้ว', confidence: 3, ratio: '1:2.0',
+    keyLevel: '96,420', targetZone: '98,000', riskZone: '95,600',
+    note: 'โครงสร้าง H1 ยังคงทำจุดสูงและจุดต่ำยกตัวขึ้น มุมมองขาขึ้นเชิงรอบ ความเชื่อมั่นปานกลางเพราะใกล้โซนแนวต้านสำคัญ ติดตามการทะลุอย่างใกล้ชิด',
+  },
+  {
+    id: 'an-004', symbol: 'XAUUSD', tvSymbol: 'OANDA:XAUUSD', view: 'bearish',
+    timeframe: '5', timeAgo: '2 ชั่วโมงที่แล้ว', confidence: 3, ratio: '1:1.4',
+    keyLevel: '2,662.00', targetZone: '2,652.00', riskZone: '2,667.00',
+    note: 'ภาพระยะสั้น M5 ราคาแตะโซนความเสี่ยงด้านบนแล้วเริ่มอ่อนแรง มุมมองขาลงระยะสั้นเพื่อปรับฐาน บริหารความเสี่ยงเป็นเรื่องสำคัญที่สุด',
+  },
+  {
+    id: 'an-005', symbol: 'EURUSD', tvSymbol: 'FX:EURUSD', view: 'bullish',
+    timeframe: '240', timeAgo: '4 ชั่วโมงที่แล้ว', confidence: 4, ratio: '1:2.3',
+    keyLevel: '1.07900', targetZone: '1.08600', riskZone: '1.07550',
+    note: 'กรอบ H4 ราคายืนเหนือจุดสำคัญและสร้างฐานสะสมกำลัง มุมมองขาขึ้นเชิงโครงสร้าง อัตราส่วนน่าสนใจหากราคารักษาระดับเหนือโซนแนวรับได้',
   },
 ];
 
-function formatPrice(symbol, price) {
-  if (symbol.includes('BTC') || symbol.includes('XAU')) {
-    return price.toLocaleString('en-US', { minimumFractionDigits: symbol.includes('XAU') ? 2 : 0, maximumFractionDigits: 2 });
-  }
-  return price.toFixed(5);
-}
+function stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
 
-function stars(n) {
-  return '★'.repeat(n) + '☆'.repeat(5 - n);
-}
-
-function reactionEmoji(key) {
-  const map = { fire: '🔥', gem: '💎', bolt: '⚡', trophy: '🏆', rocket: '📊', thinking: '🤔', broken: '⚠️' };
-  return map[key] || '⭐';
-}
-
-function statusBadge(status) {
-  if (status === 'active') {
-    return `<span class="bg-goldBg text-goldSoft text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 border border-goldDim">
-      <span class="w-1.5 h-1.5 bg-up rounded-full live-dot"></span>
-      บทวิเคราะห์ใหม่
-    </span>`;
-  }
-  // High-confidence view reached its target zone — solid gold (no win/loss semantic).
-  if (status === 'hit_tp') {
-    return `<span class="bg-gold text-bg text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-gold">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-      ถึงโซนเป้าหมาย
-    </span>`;
-  }
-  // View reached its risk zone — outlined gold (neutral, not "loss").
-  if (status === 'hit_sl') {
-    return `<span class="bg-transparent text-goldSoft text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-goldDim">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-      ถึงโซนความเสี่ยง
-    </span>`;
-  }
-  return '';
-}
-
-function directionBadge(dir, symbol) {
-  // Bullish view = gold, bearish view = gray. Arrows kept, win/loss color dropped.
-  if (dir === 'BUY') {
-    return `<span class="bg-goldBg text-gold text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide flex items-center gap-1 border border-goldDim">
+function viewTag(view, symbol) {
+  if (view === 'bullish') {
+    return `<span class="inline-flex items-center gap-1 bg-goldBg text-gold text-xs font-semibold px-2.5 py-1 rounded-md border border-goldDim">
       <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>
-      มุมมองขาขึ้น ${symbol}
-    </span>`;
+      มุมมองขาขึ้น</span>`;
   }
-  return `<span class="bg-surface2 text-[#8a8a8a] text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide flex items-center gap-1 border border-line">
+  return `<span class="inline-flex items-center gap-1 bg-bearBg text-bear text-xs font-semibold px-2.5 py-1 rounded-md border border-bear/40">
     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-    มุมมองขาลง ${symbol}
-  </span>`;
+    มุมมองขาลง</span>`;
 }
 
-function renderSignal(sig) {
+function symbolPill(symbol) {
+  return `<span class="inline-flex items-center gap-1 bg-surface2 text-warm text-xs font-mono font-semibold px-2.5 py-1 rounded-full border border-line tracking-wide">${symbol}</span>`;
+}
+
+function renderCard(a) {
   const card = document.createElement('article');
-  card.className = 'bg-surface rounded-2xl p-4 mb-3 border border-line fade-in' + (sig.status !== 'active' ? ' opacity-80' : '');
-  
-  const reactionsHtml = Object.entries(sig.reactions).map(([k, v]) => 
-    `<button class="react-btn flex items-center gap-1 bg-surface2 px-2.5 py-1 rounded-full text-xs border border-line">${reactionEmoji(k)} ${v}</button>`
-  ).join('');
-  
-  const viewerStack = (sig.viewerAvatars || []).map((a, i) => 
-    `<span class="w-5 h-5 rounded-full ${a.color} text-[8px] flex items-center justify-center font-semibold font-mono border border-bg ${i === sig.viewerAvatars.length - 1 ? '' : '-mr-1.5'}">${a.initials}</span>`
-  ).join('');
-  
-  const chartHtml = sig.showChart ? `
-    <div class="tv-wrap mb-3" style="height: 280px;">
-      <div id="tv-${sig.id}" style="height: 100%; width: 100%;"></div>
-    </div>` : '';
-  
-  const closedInfo = sig.status === 'hit_tp' ? `
-    <div class="bg-goldBg text-goldSoft text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-goldDim">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7 21h10v-2H7v2zM12 5.5L17.5 11 12 16.5 6.5 11 12 5.5z"/></svg>
-      <span>ถึงโซนเป้าหมายใน ${sig.closedIn} · <span class="font-mono font-semibold">+${sig.closedPips} จุด</span></span>
-    </div>` : sig.status === 'hit_sl' ? `
-    <div class="bg-surface2 text-t2 text-xs px-3 py-2 rounded-lg mb-3 flex items-center gap-2 border border-line">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-      <span>แตะโซนความเสี่ยง <span class="font-mono font-semibold">${sig.closedPips} จุด</span> · บริหารความเสี่ยงสำคัญที่สุด</span>
-    </div>` : '';
-  
+  card.className = 'bubble fade-in bg-surface border border-line rounded-2xl rounded-tl-md p-4 shadow-sm';
   card.innerHTML = `
-    <header class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2.5">
-        <div class="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-bg font-mono font-bold text-sm">A</div>
-        <div>
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-full bg-gold flex items-center justify-center text-bg font-mono font-bold text-sm flex-shrink-0">A</div>
+        <div class="min-w-0">
           <div class="flex items-center gap-1">
-            <p class="text-sm font-semibold">AURUM Analyst</p>
-            <svg class="w-3.5 h-3.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L9 9H1l6.5 5L5 22l7-5 7 5-2.5-8L23 9h-8z"/></svg>
+            <p class="text-sm font-semibold text-warm">AURUM Analyst</p>
+            <svg class="w-3.5 h-3.5 text-gold" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L9 9H1l6.5 5L5 22l7-5 7 5-2.5-8L23 9h-8z"/></svg>
           </div>
-          <p class="text-[11px] text-t3 font-mono">${sig.timeAgo} · M${sig.timeframe}</p>
+          <p class="text-[11px] text-t3 font-mono">บทวิเคราะห์ · M${a.timeframe}</p>
         </div>
       </div>
-      ${statusBadge(sig.status)}
-    </header>
-    
-    ${chartHtml}
-    
-    <div class="flex items-center gap-2 mb-3 flex-wrap">
-      ${directionBadge(sig.direction, sig.symbol)}
-      <span class="text-xs text-t2">อัตราส่วน ${sig.rr}</span>
-      <span class="text-xs text-t2 ml-auto">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(sig.confidence)}</span></span>
+      <span class="text-[11px] text-t3 font-mono whitespace-nowrap flex-shrink-0">${a.timeAgo}</span>
     </div>
-    
-    <div class="grid grid-cols-3 gap-1.5 mb-3">
-      <div class="bg-surface2 rounded-lg p-2.5">
+
+    <div class="flex items-center gap-2 flex-wrap mb-3">
+      ${symbolPill(a.symbol)}
+      ${viewTag(a.view, a.symbol)}
+      <span class="ml-auto text-xs text-warmDim">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(a.confidence)}</span></span>
+    </div>
+
+    <button class="chart-toggle w-full flex items-center justify-between bg-surface2 hover:bg-line border border-line rounded-xl px-3.5 py-2.5 text-sm text-warmDim transition" data-id="${a.id}">
+      <span class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-goldSoft" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        ดูกราฟ TradingView
+      </span>
+      <svg class="chev w-4 h-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+    </button>
+    <div class="chart-collapse mt-3" id="wrap-${a.id}">
+      <div class="tv-wrap" style="height: 300px;">
+        <div id="tv-${a.id}" style="height:100%;width:100%;"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-1.5 mt-3">
+      <div class="bg-surface2 rounded-lg p-2.5 border border-line/60">
         <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">จุดสำคัญ</p>
-        <p class="font-mono font-semibold text-sm text-gold">${formatPrice(sig.symbol, sig.entry)}</p>
+        <p class="font-mono font-semibold text-sm text-gold">${a.keyLevel}</p>
       </div>
-      <div class="bg-surface2 rounded-lg p-2.5">
+      <div class="bg-surface2 rounded-lg p-2.5 border border-line/60">
         <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">โซนเป้าหมาย</p>
-        <p class="font-mono font-semibold text-sm text-goldSoft">${formatPrice(sig.symbol, sig.tp)}</p>
+        <p class="font-mono font-semibold text-sm text-goldSoft">${a.targetZone}</p>
       </div>
-      <div class="bg-surface2 rounded-lg p-2.5">
+      <div class="bg-surface2 rounded-lg p-2.5 border border-line/60">
         <p class="text-[10px] text-t3 uppercase tracking-wider mb-0.5">โซนความเสี่ยง</p>
-        <p class="font-mono font-semibold text-sm text-t2">${formatPrice(sig.symbol, sig.sl)}</p>
+        <p class="font-mono font-semibold text-sm ${a.view === 'bearish' ? 'text-bear' : 'text-warmDim'}">${a.riskZone}</p>
       </div>
     </div>
-    
-    ${closedInfo}
-    
-    <p class="text-xs bg-goldBg text-goldSoft p-3 rounded-lg mb-3 flex items-start gap-2 border border-goldDim/50 leading-relaxed">
-      <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-      <span>${sig.reason}</span>
-    </p>
-    
-    <footer class="flex items-center justify-between pt-3 border-t border-line flex-wrap gap-2">
-      <div class="flex gap-1.5 flex-wrap">
-        ${reactionsHtml}
-        <button class="react-btn bg-surface2 px-2.5 py-1 rounded-full text-xs border border-line">+</button>
-      </div>
-      <div class="flex items-center gap-2">
-        ${viewerStack ? `<div class="flex items-center">${viewerStack}</div>` : ''}
-        <span class="text-xs text-t2 flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-          </svg>
-          ${sig.viewers} ${sig.status === 'active' ? 'viewing' : 'viewed'}
-        </span>
-      </div>
-    </footer>
+
+    <div class="flex items-center gap-2 mt-3 text-xs text-warmDim">
+      <span>อัตราส่วน <span class="font-mono text-warm">${a.ratio}</span></span>
+    </div>
+
+    <p class="text-[13px] leading-relaxed text-warmDim bg-bg/40 border border-line/60 rounded-xl p-3 mt-3">${a.note}</p>
   `;
-  
   return card;
 }
 
-function loadTradingViewChart(sig) {
-  if (!sig.showChart || typeof TradingView === 'undefined') return;
-  // The gate may have replaced the body (login / no-sub screen) — skip if gone.
-  if (!document.getElementById(`tv-${sig.id}`)) return;
+const feed = document.getElementById('analysis-feed');
+SAMPLE_ANALYSES.forEach(a => feed.appendChild(renderCard(a)));
 
+/* Lazy-load: build the TradingView widget only the first time a card is expanded. */
+function loadChart(a) {
+  const host = document.getElementById('tv-' + a.id);
+  if (!host || host.dataset.loaded || typeof TradingView === 'undefined') return;
+  host.dataset.loaded = '1';
   new TradingView.widget({
-    container_id: `tv-${sig.id}`,
-    symbol: sig.tvSymbol,
-    interval: sig.timeframe,
-    timezone: 'Asia/Bangkok',
-    theme: 'dark',
-    style: '1',
-    locale: 'th',
-    toolbar_bg: '#131722',
-    hide_top_toolbar: true,
-    hide_side_toolbar: true,
-    hide_legend: false,
-    save_image: false,
-    allow_symbol_change: false,
-    details: false,
-    autosize: true,
-    studies: ['MAExp@tv-basicstudies'],
+    container_id: 'tv-' + a.id,
+    symbol: a.tvSymbol, interval: a.timeframe,
+    timezone: 'Asia/Bangkok', theme: 'dark', style: '1', locale: 'th',
+    toolbar_bg: '#131722', hide_top_toolbar: true, hide_side_toolbar: true,
+    hide_legend: false, save_image: false, allow_symbol_change: false,
+    details: false, autosize: true, studies: ['MAExp@tv-basicstudies'],
   });
 }
 
-const feed = document.getElementById('signal-feed');
-MOCK_SIGNALS.forEach(sig => {
-  feed.appendChild(renderSignal(sig));
+const byId = Object.fromEntries(SAMPLE_ANALYSES.map(a => [a.id, a]));
+document.querySelectorAll('.chart-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const id = btn.dataset.id;
+    const wrap = document.getElementById('wrap-' + id);
+    const chev = btn.querySelector('.chev');
+    const open = wrap.classList.toggle('open');
+    chev.style.transform = open ? 'rotate(180deg)' : '';
+    if (open) loadChart(byId[id]);
+  });
 });
 
-setTimeout(() => {
-  MOCK_SIGNALS.forEach(loadTradingViewChart);
-}, 100);
-
-document.getElementById('enable-push').addEventListener('click', async () => {
-  if (!('Notification' in window)) {
-    alert('เบราว์เซอร์นี้ยังไม่รองรับการแจ้งเตือน');
-    return;
-  }
-  const perm = await Notification.requestPermission();
-  if (perm === 'granted') {
-    new Notification('AURUM Analysis', {
-      body: 'เปิดการแจ้งเตือนเรียบร้อย — คุณจะได้รับบทวิเคราะห์ใหม่ทันที',
-      icon: '/icon-192.png',
-    });
-    document.getElementById('enable-push').textContent = '✓ เปิดแล้ว';
-    document.getElementById('enable-push').classList.add('bg-up', 'text-white');
-    document.getElementById('enable-push').classList.remove('bg-gold', 'text-bg');
-  }
-});
-
+/* Scroll-to-bottom (jump to newest) */
+const scrollBtn = document.getElementById('scroll-bottom');
+function toggleScrollBtn() {
+  const nearBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 200;
+  scrollBtn.classList.toggle('opacity-0', nearBottom);
+  scrollBtn.classList.toggle('pointer-events-none', nearBottom);
+}
+window.addEventListener('scroll', toggleScrollBtn, { passive: true });
+scrollBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
+toggleScrollBtn();
 </script>
 
 </body>
