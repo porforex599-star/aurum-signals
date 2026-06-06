@@ -5,8 +5,9 @@
 # The room must never expose trading-desk jargon. This scans the user-facing
 # deliverable files (HTML + SQL) and fails if any forbidden term appears.
 #
-# Scope: *.html at repo root + sql/*.sql. README.md and this script are NOT
-# scanned (they legitimately reference the forbidden words to document them).
+# Scope: *.html at repo root + js/*.js + sql/*.sql. README.md and this script
+# are NOT scanned (they legitimately reference the forbidden words to document
+# them).
 #
 # Approved vocabulary only:
 #   บทวิเคราะห์, มุมมองขาขึ้น/ขาลง, จุดสำคัญ, โซนเป้าหมาย, ระดับความเสี่ยง,
@@ -17,7 +18,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # Files to scan (only those that exist).
-mapfile -t FILES < <(git ls-files '*.html' 'sql/*.sql')
+mapfile -t FILES < <(git ls-files '*.html' 'js/*.js' 'sql/*.sql')
 if [ "${#FILES[@]}" -eq 0 ]; then
   echo "check-banned-vocab: no HTML/SQL files to scan."
   exit 0

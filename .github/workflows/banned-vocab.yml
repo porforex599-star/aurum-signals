@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '**/*.html'
+      - 'js/**/*.js'
       - 'sql/**/*.sql'
       - 'scripts/check-banned-vocab.sh'
       - '.github/workflows/banned-vocab.yml'
