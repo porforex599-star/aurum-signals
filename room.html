@@ -1000,6 +1000,56 @@ function showChartEmpty(empty) {
   }
 }
 
+/* Short marker label per Gold Panel pattern kind (matches the client preview's
+   3s-Bull/3s-Bear text; engulfing/pin get compact labels). */
+function patternLabel(kind) {
+  switch (kind) {
+    case '3ls_bull': return '3s-Bull';
+    case '3ls_bear': return '3s-Bear';
+    case 'engulf_bull':
+    case 'engulf_bear': return 'Engulf';
+    case 'pin_bar': return 'Pin';
+    default: return kind || '';
+  }
+}
+
+/* Task 1.3 — map analysis_posts.pattern_markers (live shape {kind, time, price})
+   into Lightweight Charts markers. Direction comes from the kind's bull/bear
+   suffix (the DB has no separate direction field). Returns null when the post
+   carries no server markers, so the caller can fall back to the client preview.
+   Marker times are snapped to the nearest candle time so they land on a bar. */
+function serverPatternMarkers(p, data) {
+  if (!Array.isArray(p.pattern_markers) || !p.pattern_markers.length) return null;
+  if (!data || !data.length) return [];
+  const times = data.map(c => c.time);
+  function snap(t) {
+    if (times.indexOf(t) !== -1) return t;
+    let best = times[0], bd = Math.abs(times[0] - t);
+    for (let i = 1; i < times.length; i++) {
+      const d = Math.abs(times[i] - t);
+      if (d < bd) { bd = d; best = times[i]; }
+    }
+    return best;
+  }
+  return p.pattern_markers.map(m => {
+    const kind = m.kind || m.type || '';
+    const bull = /bull/i.test(kind) || m.direction === 'bullish' || m.side === 'bull';
+    const t = typeof m.time === 'number'
+      ? m.time
+      : Math.floor(new Date(m.timestamp_utc).getTime() / 1000);
+    if (!Number.isFinite(t)) return null;
+    return {
+      kind: kind || (bull ? 'bull' : 'bear'),
+      time: snap(t),
+      position: bull ? 'belowBar' : 'aboveBar',
+      color: bull ? '#22c55e' : '#ef4444',
+      shape: bull ? 'arrowUp' : 'arrowDown',
+      text: patternLabel(kind),
+      size: 2,
+    };
+  }).filter(Boolean);
+}
+
 function updateChart(p) {
   if (!chart || typeof LightweightCharts === 'undefined') return;
 
@@ -1065,10 +1115,13 @@ function updateChart(p) {
     shape: p.view === 'bullish' ? 'arrowUp' : 'arrowDown',
     text: p.view === 'bullish' ? 'ขาขึ้น' : 'ขาลง',
   };
-  // F6–F9 pattern markers, detected over the CLOSED candles (non-repaint).
-  // detectPatterns is intentionally decoupled from rendering so a future
-  // Pine V.3 webhook can supply the array instead (Phase 4 Step 4, §6).
-  const patternMarkers = (typeof detectPatterns === 'function' ? detectPatterns(data) : []);
+  // Task 1.3 / D1 Hybrid — server-delivered pattern_markers are authoritative
+  // and OVERWRITE the client-detected preview when present. Demo samples (no
+  // server markers) keep using the client detectPatterns() preview.
+  const serverMarkers = serverPatternMarkers(p, data);
+  const patternMarkers = serverMarkers !== null
+    ? serverMarkers
+    : (typeof detectPatterns === 'function' ? detectPatterns(data) : []);
   markerCtx = { directionMarker, patternMarkers };
   renderMarkers();
 
