@@ -1356,9 +1356,11 @@ function updateUnreadBadge() {
 function handleInsert(post) {
   const p = { ...post, unread: true, isNew: true };
   POSTS.unshift(p);
-  // auto-follow same symbol in the right pane
+  // Auto-follow same symbol in the right pane — but NEVER steal the view from a
+  // live (server) post. Demo/preview inserts must not override an authoritative
+  // analysis_posts row (this is what hijacked deep-linked real posts before).
   const cur = getById(state.selected);
-  if (cur && cur.symbol === p.symbol) state.selected = p.id;
+  if (cur && cur.symbol === p.symbol && !cur.isReal) state.selected = p.id;
   renderList();
   if (state.selected === p.id) renderDetail();
   showToast(p);
@@ -1585,9 +1587,16 @@ renderList();
 renderDetail();
 maybeRequestNotify();
 loadRealFeed();
-// Demo: confirm the first (pending) post, then show one incoming alert.
-setTimeout(() => handleConfirm('an-001'), 5000);
-setTimeout(simulateIncoming, 9000);
+// Demo (preview only): confirm the first pending post, then show one incoming
+// alert. Skipped when a ?post_id deep link is active so the linked live post is
+// not disturbed and the smoke test stays clean. The manual จำลอง button is
+// unaffected and still works.
+let bootHasDeepLink = false;
+try { bootHasDeepLink = !!new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
+if (!bootHasDeepLink) {
+  setTimeout(() => handleConfirm('an-001'), 5000);
+  setTimeout(simulateIncoming, 9000);
+}
 </script>
 
 </body>
