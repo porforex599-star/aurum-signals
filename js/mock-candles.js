@@ -1,7 +1,7 @@
 /* ============================================================================
  * Mock OHLC candles for the Aurum Analysis room (Phase 2.5).
  *
- * Deterministic, seeded random walks — ~120 M15 candles per symbol. Each
+ * Deterministic, seeded random walks — ~300 M15 candles per symbol. Each
  * candle opens at the previous close (no impossible gaps), with ~0.3% per-step
  * movement. Times are UNIX seconds (intraday resolution required by
  * TradingView Lightweight Charts).
@@ -32,7 +32,7 @@
     return h >>> 0;
   }
 
-  var COUNT = 120;
+  var COUNT = 300; // bumped from 120 (Decision D7) — seed SMMA 200 fully in preview
   var STEP_MIN = 15;
   var STEP = STEP_MIN * 60;
   // Fixed recent anchor so candle times are deterministic for the preview.
