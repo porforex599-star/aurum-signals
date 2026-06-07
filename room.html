@@ -653,6 +653,7 @@ function selectPost(id) {
    selection updates data + redraws overlays (no chart re-creation).
    ===================================================================== */
 let chart, candleSeries, ema9Series, priceLines = [], shellBuilt = false;
+let sdZonesPrimitive = null; // supply/demand zone overlay (Task 1.2)
 let emaOn = localStorage.getItem('aurum-ema') !== 'off'; // default ON
 
 /* Gold Panel SMMA lines (F1–F4) — colors/widths mirror Pine V.1 lines 4–41
@@ -705,6 +706,77 @@ function chartOptions() {
   };
 }
 
+/* =====================================================================
+   Task 1.2 — Supply/Demand zone overlay.
+   Lightweight Charts v4 has no native rectangle, so this is a Series Primitive
+   attached to candleSeries. Each zone is a full-width horizontal band spanning
+   its price range (bottom ↔ top), drawn UNDER the candles (zOrder 'bottom').
+     supply → red   fill rgba(239,68,68,0.15)  border rgba(239,68,68,0.4)
+     demand → green fill rgba(34,197,94,0.15)   border rgba(34,197,94,0.4)
+   A mitigated zone (price already closed through it) fades + gets a dashed
+   border, matching the design doc's "fade, keep visible" decision (D3).
+   The DB shape is {tf, low, high, type, mitigated}; we read high/low (with a
+   top/bottom alias for safety). ===================================================================== */
+function makeSDZonesPrimitive() {
+  let zones = [];
+  let series = null;
+  let requestUpdate = null;
+
+  const ZONE_STYLE = {
+    supply: { fill: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)' },
+    demand: { fill: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.4)' },
+  };
+
+  const renderer = {
+    draw(target) {
+      if (!series || !zones.length) return;
+      target.useBitmapCoordinateSpace(scope => {
+        const ctx = scope.context;
+        const vr = scope.verticalPixelRatio;
+        const w = scope.bitmapSize.width;
+        zones.forEach(z => {
+          const style = ZONE_STYLE[z.type] || ZONE_STYLE.demand;
+          const yA = series.priceToCoordinate(z.high);
+          const yB = series.priceToCoordinate(z.low);
+          if (yA == null || yB == null) return;
+          const top = Math.min(yA, yB) * vr;
+          const height = Math.abs(yB - yA) * vr;
+          if (height <= 0) return;
+          ctx.save();
+          // Mitigated zones fade out but stay on the chart for context (D3).
+          ctx.globalAlpha = z.mitigated ? 0.4 : 1;
+          ctx.fillStyle = style.fill;
+          ctx.fillRect(0, top, w, height);
+          ctx.strokeStyle = style.border;
+          ctx.lineWidth = Math.max(1, vr);
+          if (z.mitigated) ctx.setLineDash([Math.max(2, 4 * vr), Math.max(2, 4 * vr)]);
+          ctx.strokeRect(0, top, w, height);
+          ctx.restore();
+        });
+      });
+    },
+  };
+
+  const paneView = { renderer() { return renderer; }, zOrder() { return 'bottom'; } };
+
+  return {
+    attached(param) { series = param.series; requestUpdate = param.requestUpdate; },
+    detached() { series = null; requestUpdate = null; },
+    updateAllViews() {},
+    paneViews() { return [paneView]; },
+    setZones(next) {
+      // Normalise DB rows → {type, high, low, mitigated}, drop unusable entries.
+      zones = (next || []).map(z => ({
+        type: z.type === 'supply' ? 'supply' : 'demand',
+        high: +(z.high != null ? z.high : z.top),
+        low:  +(z.low  != null ? z.low  : z.bottom),
+        mitigated: !!z.mitigated,
+      })).filter(z => Number.isFinite(z.high) && Number.isFinite(z.low));
+      if (requestUpdate) requestUpdate();
+    },
+  };
+}
+
 function buildDetailShell() {
   detailEl.innerHTML = `
     <div class="fade-in">
@@ -737,6 +809,13 @@ function buildDetailShell() {
     wickUpColor: '#22c55e', wickDownColor: '#ef4444',
   });
   ema9Series = chart.addLineSeries({ color: '#a78bfa', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, title: 'EMA9' });
+
+  // Supply/Demand zone overlay (Task 1.2) — drawn under the candles, fed per
+  // selection in updateChart(). attachPrimitive is available in LWC v4.2.
+  if (typeof candleSeries.attachPrimitive === 'function') {
+    sdZonesPrimitive = makeSDZonesPrimitive();
+    candleSeries.attachPrimitive(sdZonesPrimitive);
+  }
 
   // SMMA 21/50/100/200 — one LineSeries each (mirrors ema9Series). Drawn above
   // candles in definition order; data is set per selection in updateChart().
@@ -974,6 +1053,9 @@ function updateChart(p) {
   addPriceLine(p.keyLevel, '#d4af37', LightweightCharts.LineStyle.Dashed, 2, 'จุดสำคัญ ' + fmtLevel(p.symbol, p.keyLevel));
   p.targetZones.forEach((z, i) => addPriceLine(z.level, '#d4af37', LightweightCharts.LineStyle.Solid, 1, 'Z' + (i + 1) + (z.hit ? ' ✓' : '')));
   addPriceLine(p.riskLevel, '#ef4444', LightweightCharts.LineStyle.Dashed, 2, 'ความเสี่ยง ' + fmtLevel(p.symbol, p.riskLevel));
+
+  // Task 1.2 — supply/demand zone bands (real V.2 posts only; samples carry none).
+  if (sdZonesPrimitive) sdZonesPrimitive.setZones(p.sd_zones || []);
 
   // Existing analysis direction marker (ขาขึ้น/ขาลง) at the anchor candle.
   const directionMarker = {
