@@ -1,6 +1,7 @@
 # Phase 4 — Gold Panel rendering in `/room` (Design Plan)
 
-> **Status:** Design only — no implementation in this document.
+> **Status:** Design locked — all 8 founder decisions recorded in §7. Ready to merge. No
+> implementation in this document (except the one sanctioned D7 mock-candle bump noted in §7).
 > **Goal:** Bring the *Gold Panel V.1* TradingView indicator's visual language into the
 > Aurum Analysis room (`room.html`), rendered on the existing TradingView **Lightweight
 > Charts** instance.
@@ -46,8 +47,9 @@ Every visual feature emitted by Gold Panel V.1, with its Pine source location.
 | F13 | *(alerts, not visual)* | `87–91`, `508–533` | `alertcondition` / `alert()` messages. **Not a chart visual** — these map to the room's existing toast/notification path, listed here only for completeness. |
 
 > **Note on F10 timezone & session times:** the Pine session windows are authored around
-> CME/Chicago hours. The room serves a Thai audience (`lang="th"`). Whether to keep
-> Chicago, convert to `Asia/Bangkok`, or make it configurable is an **open question (§7)**.
+> CME/Chicago hours. The room serves a Thai audience (`lang="th"`). **Decided (§7 D4):** keep
+> the Chicago **logic** for active-bar computation, but **display** the label in `Asia/Bangkok`
+> (e.g. `"CME Open 19:00–00:00 ไทย"`).
 
 ---
 
@@ -92,7 +94,7 @@ browser does not have.
 | Feature | Why it must be server-delivered |
 |---------|-------------------------------|
 | **F12 MTF Supply & Demand zones** | Pivots are pulled from *higher timeframes* via `request.security` with `ta.pivothigh/low` and `ta.atr(200)` (`pine:409–423`). The room only holds the chart-timeframe candles for one symbol, not the 2H/30Min pivot history, and re-deriving HTF pivots + ATR + mitigation client-side would diverge from what the trader sees in TradingView. Ship the resolved zone rectangles (top/bottom/left-time/side/timeframe-label/mitigated) as data. |
-| **F6–F9 patterns — *authoritative* copy** | Although the client *can* compute these (Group A), the **source of truth** the trader acts on is Pine's realtime detection at bar close. To keep room markers byte-for-byte consistent with the indicator and to honor the non-repaint contract, the **confirmed** pattern hits should also arrive from the webhook. **Recommended hybrid:** client computes for instant/preview rendering; server-delivered `pattern_markers` overwrite/confirm them on bar close (same false→true flip as `confirmed`). |
+| **F6–F9 patterns — *authoritative* copy** | Although the client *can* compute these (Group A), the **source of truth** the trader acts on is Pine's realtime detection at bar close. To keep room markers byte-for-byte consistent with the indicator and to honor the non-repaint contract, the **confirmed** pattern hits also arrive from the webhook. **DECIDED — Hybrid (founder, §7 D1):** the client computes pattern markers for an **instant preview**, then server-delivered `pattern_markers` **overwrite the preview** with the authoritative confirmed copy on bar close — the same false→true flip as `analysis_posts.confirmed`. This is the locked approach, not just a recommendation. |
 
 **New fields required on `analysis_posts`** (full DDL in §3):
 
@@ -263,10 +265,13 @@ schema/backend change and deferring the canvas-overlay-heavy work.
    Land `pattern_markers` + `sd_zones` early so backend (Pine V.3 → webhook) and frontend can
    proceed in parallel. Additive + nullable ⇒ deploy anytime with zero risk to the live room.
 
-4. **F6–F9 Pattern markers — server-authoritative** *(M, depends on #3).*
-   Upgrade the preview from #2 to the confirmed copy delivered by the webhook, flipping
-   client-computed markers to server-confirmed on bar close (same non-repaint pattern as
-   `analysis_posts.confirmed`). Now the room matches TradingView exactly.
+4. **F6–F9 Pattern markers — server-authoritative (hybrid completion)** *(M, depends on #3).*
+   **DECIDED — Hybrid (§7 D1):** complete the hybrid started in #2. The client preview from
+   step #2 stays as the instant-render path; the Pine V.3 webhook now delivers authoritative
+   `pattern_markers`, and the room **overwrites the client preview** with the confirmed copy
+   on bar close — the same false→true flip as `analysis_posts.confirmed`. After this step the
+   room markers match TradingView exactly, with no repaint and no perceived latency (preview
+   shows instantly, server confirms moments later).
 
 5. **Shared `OverlayCanvas` primitive** *(L, foundational).*
    The gate for F10, F12, and exact-F5. Build and test it in isolation (draw one dummy rect
@@ -284,55 +289,82 @@ schema/backend change and deferring the canvas-overlay-heavy work.
    dependency on #5); upgrade to the exact canvas fill only if the founder wants pixel parity.
 
 8. **F10 Trading Session highlight** *(L, depends on #5).*
-   Deferred last: depends on the canvas primitive **and** carries the unresolved
-   timezone/session-hours question (§7). Lowest value for a Thai audience until the session
-   semantics are confirmed.
+   Deferred last: depends on the canvas primitive. Timezone/session semantics are now locked
+   (§7 D4 — Chicago logic, Bangkok-displayed label), so this is unblocked once #5 lands; it
+   is sequenced last purely on value/effort, not on any remaining uncertainty.
 
 **One-line summary:** MAs + label → pattern markers (preview) → schema → patterns (confirmed)
 → overlay primitive → S&D zones → trend fill → session highlight.
 
 ---
 
-## 7. Open Questions (confirm with founder before implementing)
+## 7. Decisions Locked
 
-1. **F10 session timezone & hours.** Pine defaults to `America/Chicago` and CME hours
-   (`08:30–12:00`, `pine:99–108`). The room is Thai (`lang="th"`). Keep Chicago, convert to
-   `Asia/Bangkok`, or make it user-configurable? This blocks F10 and affects its value.
+All eight items below were **decided by the founder** and are binding inputs to the Phase 4
+build. (Numbering is preserved for traceability against the original open-questions list; the
+founder's decision letters Dn are referenced from §2 and §6.)
 
-2. **Patterns: client-computed vs server-authoritative (or hybrid)?** §2 recommends the
-   hybrid (client preview, server confirms). Confirm the founder wants the webhook to be the
-   source of truth — that decides whether Pine V.3 must emit `pattern_markers` at all, and
-   whether #4 in §6 happens.
+1. **D1 — Pattern detection: Hybrid.** ✅ **Decided.** The client computes pattern markers
+   (F6–F9) for an **instant preview**; the Pine V.3 webhook delivers **authoritative confirmed
+   markers** that **overwrite the preview** on bar close — the same false→true flip as
+   `analysis_posts.confirmed`. The webhook **is** the source of truth; client compute exists
+   only to remove perceived latency. Drives §2B (patterns row) and §6 steps #2 + #4.
 
-3. **SMMA: recompute client-side, or ship `smma_snapshot`?** Default plan recomputes
-   client-side (cheaper, no schema cost). But the room's candles are currently **mock**
-   (`js/mock-candles.js`) and Phase 3 may use a *different* candle source than TradingView —
-   if the candles don't match TradingView's, the MAs won't either. Confirm Phase 3's candle
-   source is faithful enough, or decide we need `smma_snapshot`.
+2. **D2 — S&D timeframes: both, always.** ✅ **Decided.** The room **always renders both
+   `2H` and `30Min`** zones, matching Pine V.1 defaults (`TF_1 = 2H`, `TF_2 = 30Min`,
+   `pine:213–214,232–233`). No per-post timeframe filtering. `sd_zones` payloads therefore
+   carry entries for both TFs, distinguished by `tf_label`.
 
-4. **F5 Trend Fill fidelity.** Acceptable to ship the `addBaselineSeries` approximation
-   (shades vs a scalar baseline) instead of the exact between-two-curves fill? Exact parity
-   forces the L-sized canvas path.
+3. **D3 — Zone mitigated lifecycle: fade + strike, keep visible.** ✅ **Decided.** When
+   `sd_zones[*].mitigated` flips true via realtime UPDATE, the room does **NOT** remove the
+   box (this is where the room **diverges from Pine's delete behavior**). Instead it applies
+   **lower opacity (fade) + strike-through styling**, keeping the zone visible so members see
+   *"this zone was tested and broken"* — educational context. The canvas overlay (§4) must
+   support a per-zone `mitigated` draw state, not just present/absent.
 
-5. **How many S&D timeframes?** Pine ships **two** active TFs (2H + 30Min; TF3 is commented
-   out, `pine:424–425`). Render both in the room, or just the one matching the post's
-   timeframe? Affects `sd_zones` payload size and visual density.
+4. **D4 — Session timezone: Chicago logic, Bangkok display.** ✅ **Decided.** Keep Pine's
+   `America/Chicago` session **logic** unchanged (window membership computed in Chicago time,
+   `pine:99–172`), but **display** the times converted to `Asia/Bangkok` in the UI label —
+   e.g. `"CME Open 19:00–00:00 ไทย"`. Only the label string is localized; the underlying
+   active-bar computation stays Chicago-based so the highlight matches TradingView exactly.
 
-6. **Zone lifecycle in the room.** When `sd_zones[*].mitigated` flips true via realtime
-   UPDATE, should the room **remove** the box (Pine's behavior) or **fade/strike** it to show
-   history? Pine deletes; the room might prefer to keep context.
+5. **D5 — SMMA compute: client-side.** ✅ **Decided.** SMMA 21/50/100/200 (F1–F4) are
+   **computed client-side** (cheaper, no schema cost). `smma_snapshot` (§3) stays **optional /
+   unused** — leave the column nullable and unpopulated. **Dependency on D7:** client compute
+   is only faithful if enough candle history is present, which D7 addresses.
 
-7. **Candle history depth.** F4 (200 SMMA) needs ≥200 candles to seed; `mock-candles.js`
-   generates **120** (`js/mock-candles.js:35`). The 100/200 MAs will be short or empty on the
-   current preview data. Confirm Phase 3 delivers ≥200 candles, or accept that 100/200 SMMA
-   render partially until then.
+6. **D6 — Trend Fill fidelity: approximation first.** ✅ **Decided.** Ship the
+   `addBaselineSeries` **baseline approximation** (M effort) for F5 first; the exact
+   between-two-curves canvas fill (L effort) is **deferred** and only revisited if pixel
+   parity is later requested. §6 step #7 proceeds with the M-sized path.
 
-8. **Performance budget on mobile.** A custom canvas overlay redrawing on every pan/zoom,
-   plus 5 extra series, on the existing mobile-tuned chart (`handleScroll`/`handleScale`
-   gated for mobile, `room.html:671`). Confirm the target device floor so we can decide
-   whether to throttle overlay redraws.
+7. **D7 — Candle depth: bump mock to 300.** ✅ **Decided.** Raise `js/mock-candles.js`
+   `COUNT` from **120 → 300** so the 100/200 SMMA (F4) have enough history to seed and render
+   fully in preview. Production uses the **real candle feed** (Phase 3); the mock bump is a
+   preview-only fix. *(This is the one code change sanctioned alongside the Phase 4 build; it
+   is a one-line constant edit at `js/mock-candles.js:35`.)*
+
+8. **D8 — Performance: throttle overlay to 60fps.** ✅ **Decided.** The shared canvas overlay
+   (§4, serving F10 + F12) **throttles its redraws to 60fps** (≈16ms, e.g. via
+   `requestAnimationFrame` coalescing) instead of redrawing synchronously on every
+   pan/zoom/visible-range event. **Mobile device testing is required during implementation**
+   against the existing mobile-tuned chart gating (`room.html:671`).
+
+### Decision → section impact map
+
+| Decision | Affects |
+|----------|---------|
+| D1 Hybrid patterns | §2B patterns row, §6 steps #2 & #4, §3 `pattern_markers` |
+| D2 Both TFs | §2B F12, §3 `sd_zones` (both `tf_label`s) |
+| D3 Fade + strike | §4 F12 overlay (per-zone `mitigated` state), §3 `sd_zones.mitigated` |
+| D4 Chicago logic / Bangkok label | §1 F10 note, §4 F10 overlay (label localization only) |
+| D5 Client SMMA | §2A F1–F4, §3 `smma_snapshot` stays nullable/unused |
+| D6 Baseline approximation | §4 F5 row, §5 (F5 = M, exact-canvas deferred), §6 step #7 |
+| D7 300 candles | `js/mock-candles.js:35`, unblocks F4 (200 SMMA) in preview |
+| D8 60fps throttle | §4 shared `OverlayCanvas`, §5 overlay primitive |
 
 ---
 
-*End of Phase 4 design plan. No implementation code is included by design — this document is
-the input to the Phase 4 build.*
+*End of Phase 4 design plan. All founder decisions are locked above — this document is the
+binding input to the Phase 4 build. The only sanctioned code change bundled with the build is
+the D7 mock-candle bump; all other features are implemented per the order in §6.*
