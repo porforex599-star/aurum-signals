@@ -1529,6 +1529,45 @@ async function loadRealFeed() {
   runDeepLink();
 }
 
+/* =====================================================================
+   Task 1.4 — ?post_id deep link (e.g. opened from Telegram). On mount, if the
+   URL carries a post_id that matches a loaded post, clear any filter that would
+   hide it, select it as active, scroll its list row into view and highlight it.
+   Runs once (deepLinkDone), invoked by runDeepLink() after the feed resolves so
+   real rows are present; sample ids already in POSTS at boot also resolve.
+   ===================================================================== */
+function applyDeepLink() {
+  if (deepLinkDone) return;
+  let pid = null;
+  try { pid = new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
+  if (!pid) { deepLinkDone = true; return; }
+  const target = getById(pid);
+  if (!target) return; // not loaded — nothing to scroll to
+
+  deepLinkDone = true;
+  // Clear filters that could hide the target row.
+  state.symbol = 'all';
+  const symSel = document.getElementById('f-symbol');
+  if (symSel) symSel.value = 'all';
+  if (state.conf > target.confidence) {
+    state.conf = 0;
+    document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('bg-gold', 'text-bg', 'border-gold'));
+    const allBtn = document.querySelector('.conf-btn');
+    if (allBtn) allBtn.classList.add('bg-gold', 'text-bg', 'border-gold');
+  }
+
+  selectPost(pid); // sets active, re-renders list + detail (and shows detail on mobile)
+
+  // Scroll the row into view + highlight once the re-render has placed it.
+  requestAnimationFrame(() => {
+    const row = document.getElementById('row-' + pid);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.add('confirm-glow');
+    setTimeout(() => row.classList.remove('confirm-glow'), 1700);
+  });
+}
+
 /* ---------- boot ---------- */
 renderList();
 renderDetail();
