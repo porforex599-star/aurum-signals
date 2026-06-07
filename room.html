@@ -764,6 +764,18 @@ function makeSDZonesPrimitive() {
     detached() { series = null; requestUpdate = null; },
     updateAllViews() {},
     paneViews() { return [paneView]; },
+    // Extend the price scale so zones sitting above/below the candle range stay
+    // visible (TradingView shows S&D zones in context, not clipped off-screen).
+    autoscaleInfo() {
+      if (!zones.length) return null;
+      let minValue = Infinity, maxValue = -Infinity;
+      zones.forEach(z => {
+        minValue = Math.min(minValue, z.low, z.high);
+        maxValue = Math.max(maxValue, z.low, z.high);
+      });
+      if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return null;
+      return { priceRange: { minValue, maxValue } };
+    },
     setZones(next) {
       // Normalise DB rows → {type, high, low, mitigated}, drop unusable entries.
       zones = (next || []).map(z => ({
