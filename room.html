@@ -652,6 +652,20 @@ function selectPost(id) {
 let chart, candleSeries, ema9Series, priceLines = [], shellBuilt = false;
 let emaOn = localStorage.getItem('aurum-ema') !== 'off'; // default ON
 
+/* Gold Panel SMMA lines (F1–F4) — colors/widths mirror Pine V.1 lines 4–41
+   (#ffffff/21, #6aff00/50, #facc15/100, #ff0500/200; all linewidth 2). Pine plots
+   all four; the 100-line is gated by h100=true → still ON by default here. */
+const SMMA_DEFS = [
+  { period: 21,  color: '#ffffff', label: 'SMMA 21',  lsKey: 'aurum-smma21'  },
+  { period: 50,  color: '#6aff00', label: 'SMMA 50',  lsKey: 'aurum-smma50'  },
+  { period: 100, color: '#facc15', label: 'SMMA 100', lsKey: 'aurum-smma100' },
+  { period: 200, color: '#ff0500', label: 'SMMA 200', lsKey: 'aurum-smma200' },
+];
+// Per-MA toggle state — default ON (mirrors emaOn's '!== off' persistence).
+const smmaOn = {};
+SMMA_DEFS.forEach(d => { smmaOn[d.period] = localStorage.getItem(d.lsKey) !== 'off'; });
+const smmaSeries = {}; // period -> LineSeries, created in buildDetailShell
+
 function isMobile() { return window.matchMedia('(max-width: 767px)').matches; }
 
 function chartOptions() {
@@ -680,9 +694,16 @@ function buildDetailShell() {
       <div class="mb-4">
         <div class="flex items-center justify-between gap-2 mb-2">
           <span class="text-[11px] text-t3 uppercase tracking-widest">กราฟราคา · M15</span>
-          <button id="ema-toggle" class="hidden sm:inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md border transition"></button>
+          <div class="hidden sm:flex items-center gap-1 flex-wrap justify-end">
+            <button id="ema-toggle" class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md border transition"></button>
+            <span id="smma-toggle-bar" class="inline-flex items-center gap-1"></span>
+          </div>
         </div>
-        <div id="chart-container" class="w-full h-[320px] sm:h-[480px] rounded-xl overflow-hidden border border-line"></div>
+        <div class="relative">
+          <div id="chart-container" class="w-full h-[320px] sm:h-[480px] rounded-xl overflow-hidden border border-line"></div>
+          <!-- F11 — Bull UP / Bear Down trend label (DOM badge, top-right of the chart) -->
+          <div id="trend-label" class="absolute top-2 right-2 z-10 pointer-events-none"></div>
+        </div>
         <p class="text-[10px] text-t3 mt-1 text-right">กราฟโดย TradingView Lightweight Charts</p>
       </div>
       <div id="d-bottom"></div>
@@ -695,6 +716,15 @@ function buildDetailShell() {
     wickUpColor: '#22c55e', wickDownColor: '#ef4444',
   });
   ema9Series = chart.addLineSeries({ color: '#a78bfa', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, title: 'EMA9' });
+
+  // SMMA 21/50/100/200 — one LineSeries each (mirrors ema9Series). Drawn above
+  // candles in definition order; data is set per selection in updateChart().
+  SMMA_DEFS.forEach(d => {
+    smmaSeries[d.period] = chart.addLineSeries({
+      color: d.color, lineWidth: 2,
+      priceLineVisible: false, lastValueVisible: false, title: d.label,
+    });
+  });
   shellBuilt = true;
 
   const emaBtn = document.getElementById('ema-toggle');
@@ -705,7 +735,38 @@ function buildDetailShell() {
     refreshEmaBtn(emaBtn);
     ema9Series.applyOptions({ visible: emaOn });
   });
+  buildSmmaToggles();
   window.addEventListener('resize', () => { if (chart) chart.timeScale().fitContent(); });
+}
+
+/* SMMA toggle chips (desktop control bar). Each flips one MA's visibility and
+   persists to localStorage — mirrors the EMA toggle. Lines still RENDER on
+   mobile from the persisted state; only the controls are desktop-only. */
+function buildSmmaToggles() {
+  const bar = document.getElementById('smma-toggle-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  SMMA_DEFS.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'smma-chip text-[11px] font-mono px-2 py-1 rounded-md border transition';
+    btn.title = d.label;
+    refreshSmmaChip(btn, d);
+    btn.addEventListener('click', () => {
+      smmaOn[d.period] = !smmaOn[d.period];
+      localStorage.setItem(d.lsKey, smmaOn[d.period] ? 'on' : 'off');
+      refreshSmmaChip(btn, d);
+      if (smmaSeries[d.period]) smmaSeries[d.period].applyOptions({ visible: smmaOn[d.period] });
+    });
+    bar.appendChild(btn);
+  });
+}
+
+function refreshSmmaChip(btn, d) {
+  const on = smmaOn[d.period];
+  btn.textContent = d.period;
+  btn.style.borderColor = on ? d.color : '#2c1a4a';
+  btn.style.color = on ? d.color : '#7a6f99';
+  btn.style.background = on ? 'rgba(255,255,255,0.05)' : 'transparent';
 }
 
 function refreshEmaBtn(btn) {
@@ -722,6 +783,39 @@ function computeEMA(data, period) {
   const k = 2 / (period + 1);
   let ema = null;
   return data.map(c => { ema = ema === null ? c.close : c.close * k + ema * (1 - k); return { time: c.time, value: ema }; });
+}
+
+/* SMMA (Wilder's smoothed MA) — Pine V.1 lines 4–41:
+     seed = SMA(close, period) at bar `period-1`, then
+     smma = (smma_prev*(period-1) + close) / period.
+   Emits points only from bar `period-1` onward (earlier bars have no value),
+   so a 200-period line needs ≥200 candles to start. `data` is closed candles
+   only — the mock feed contains no forming bar; the Phase 3 real feed must pass
+   closed candles here to honor the non-repaint contract. */
+function computeSMMA(data, period) {
+  const out = [];
+  let smma = null, sum = 0;
+  for (let i = 0; i < data.length; i++) {
+    const close = data[i].close;
+    if (i < period - 1) { sum += close; continue; }
+    if (smma === null) { sum += close; smma = sum / period; }      // seed = SMA(period)
+    else { smma = (smma * (period - 1) + close) / period; }        // Wilder recurrence
+    out.push({ time: data[i].time, value: smma });
+  }
+  return out;
+}
+
+/* F11 — Bull UP / Bear Down label (Pine V.1 lines 635–641): compares the last
+   CLOSED candle's close against SMMA200 at that bar. Rendered as a DOM badge,
+   not a chart marker. Hidden until there is enough history for SMMA200. */
+function updateTrendLabel(data, smma200) {
+  const el = document.getElementById('trend-label');
+  if (!el) return;
+  if (!data.length || !smma200 || !smma200.length) { el.innerHTML = ''; return; }
+  const bull = data[data.length - 1].close > smma200[smma200.length - 1].value;
+  el.innerHTML = bull
+    ? `<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-okBg text-ok border-ok/50 shadow-lg shadow-black/40">▲ Bull UP</span>`
+    : `<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-bearBg text-bear border-bear/50 shadow-lg shadow-black/40">Bear Down ▼</span>`;
 }
 
 function addPriceLine(price, color, style, width, title) {
@@ -750,6 +844,19 @@ function updateChart(p) {
   candleSeries.setData(data);
   ema9Series.setData(emaOn ? computeEMA(data, 9) : []);
   ema9Series.applyOptions({ visible: emaOn });
+
+  // SMMA 21/50/100/200 (F1–F4). Data is always set; toggling controls visibility
+  // only, so a chip click shows/hides instantly without needing a reselect.
+  let smma200Data = null;
+  SMMA_DEFS.forEach(d => {
+    const s = smmaSeries[d.period];
+    if (!s) return;
+    const series = computeSMMA(data, d.period);
+    if (d.period === 200) smma200Data = series;
+    s.setData(series);
+    s.applyOptions({ visible: smmaOn[d.period] });
+  });
+  updateTrendLabel(data, smma200Data);
 
   clearOverlays();
   addPriceLine(p.keyLevel, '#d4af37', LightweightCharts.LineStyle.Dashed, 2, 'จุดสำคัญ ' + fmtLevel(p.symbol, p.keyLevel));
