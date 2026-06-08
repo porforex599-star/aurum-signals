@@ -569,6 +569,26 @@ function getById(id) { return POSTS.find(p => p.id === id); }
 
 const state = { symbol: 'all', sort: 'new', conf: 0, selected: POSTS[0].id };
 
+/* =====================================================================
+   Phase 4c — DEEP LINK STICKY MODE (single source of truth)
+   ---------------------------------------------------------------------
+   ROOT CAUSE: when opened from Telegram with ?post_id=..., the page must
+   pin the chart + detail to that one authoritative analysis_posts row.
+   The demo simulator (boot auto-demo at +9s AND the manual จำลอง button)
+   inserts a mock XAUUSD post via handleInsert(); its auto-follow then
+   switched state.selected to the mock (same symbol) and renderDetail()
+   repainted BOTH panels — chart fell back to MOCK_CANDLES + 4472.10.
+   The earlier fix (dd8739a) guarded the boot timer + auto-follow, but the
+   guards were scattered/implicit and left the manual button and any future
+   realtime/polling path open.
+   WHY this flag: compute "is this a deep-link load?" exactly once, then
+   block EVERY automatic state-change to the selection from that flag. Only
+   an explicit user click on another post card (selectPost from the row's
+   click handler) is allowed to move off the linked post. With no ?post_id
+   the flag is false and the demo flow is 100% unchanged. */
+let isDeepLinked = false;
+try { isDeepLinked = !!new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
+
 /* ---------- formatting helpers ---------- */
 function fmtLevel(symbol, n) {
   if (symbol === 'EURUSD') return n.toFixed(5);
@@ -1359,8 +1379,11 @@ function handleInsert(post) {
   // Auto-follow same symbol in the right pane — but NEVER steal the view from a
   // live (server) post. Demo/preview inserts must not override an authoritative
   // analysis_posts row (this is what hijacked deep-linked real posts before).
+  // Phase 4c — also never auto-follow at all while deep-linked, so a real
+  // realtime INSERT (the future subscribeRealtime caller) can't move the chart
+  // off the pinned post either; the row still lands in the list, just unselected.
   const cur = getById(state.selected);
-  if (cur && cur.symbol === p.symbol && !cur.isReal) state.selected = p.id;
+  if (!isDeepLinked && cur && cur.symbol === p.symbol && !cur.isReal) state.selected = p.id;
   renderList();
   if (state.selected === p.id) renderDetail();
   showToast(p);
@@ -1381,7 +1404,10 @@ function handleConfirm(id) {
 }
 
 /* Backend wiring stub (Phase 3). Kept inert here — preview uses the demo
-   simulator below. analysis_posts lives in the aurum-customers project. */
+   simulator below. analysis_posts lives in the aurum-customers project.
+   Phase 4c note: when this is wired, handleInsert already refuses to auto-follow
+   while isDeepLinked, so a live INSERT cannot move the chart off a pinned post;
+   handleConfirm only repaints the already-selected post, so it is safe too. */
 function subscribeRealtime(client) {
   // client.channel('analysis_posts')
   //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'analysis_posts' }, ({ new: row }) => handleInsert(mapRow(row)))
@@ -1406,6 +1432,10 @@ const DEMO_POOL = [
 ];
 let demoIdx = 0;
 function simulateIncoming() {
+  // Phase 4c — sticky deep link: no demo/auto inserts may touch a deep-linked
+  // view. Gating here covers BOTH the boot auto-demo timer and the manual
+  // จำลอง button, so the linked live post can never be hijacked by a mock post.
+  if (isDeepLinked) return;
   const base = DEMO_POOL[demoIdx % DEMO_POOL.length];
   demoIdx++;
   const id = 'an-' + (++incomingSeq);
@@ -1588,12 +1618,11 @@ renderDetail();
 maybeRequestNotify();
 loadRealFeed();
 // Demo (preview only): confirm the first pending post, then show one incoming
-// alert. Skipped when a ?post_id deep link is active so the linked live post is
-// not disturbed and the smoke test stays clean. The manual จำลอง button is
-// unaffected and still works.
-let bootHasDeepLink = false;
-try { bootHasDeepLink = !!new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
-if (!bootHasDeepLink) {
+// alert. Skipped in deep-link sticky mode (isDeepLinked) so the linked live post
+// is not disturbed and the smoke test stays clean. The manual จำลอง button is
+// also gated inside simulateIncoming, so with no ?post_id the full demo flow
+// (this confirm + insert + the button) is 100% unchanged.
+if (!isDeepLinked) {
   setTimeout(() => handleConfirm('an-001'), 5000);
   setTimeout(simulateIncoming, 9000);
 }
