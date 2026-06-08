@@ -569,6 +569,26 @@ function getById(id) { return POSTS.find(p => p.id === id); }
 
 const state = { symbol: 'all', sort: 'new', conf: 0, selected: POSTS[0].id };
 
+/* =====================================================================
+   Phase 4c — DEEP LINK STICKY MODE (single source of truth)
+   ---------------------------------------------------------------------
+   ROOT CAUSE: when opened from Telegram with ?post_id=..., the page must
+   pin the chart + detail to that one authoritative analysis_posts row.
+   The demo simulator (boot auto-demo at +9s AND the manual จำลอง button)
+   inserts a mock XAUUSD post via handleInsert(); its auto-follow then
+   switched state.selected to the mock (same symbol) and renderDetail()
+   repainted BOTH panels — chart fell back to MOCK_CANDLES + 4472.10.
+   The earlier fix (dd8739a) guarded the boot timer + auto-follow, but the
+   guards were scattered/implicit and left the manual button and any future
+   realtime/polling path open.
+   WHY this flag: compute "is this a deep-link load?" exactly once, then
+   block EVERY automatic state-change to the selection from that flag. Only
+   an explicit user click on another post card (selectPost from the row's
+   click handler) is allowed to move off the linked post. With no ?post_id
+   the flag is false and the demo flow is 100% unchanged. */
+let isDeepLinked = false;
+try { isDeepLinked = !!new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
+
 /* ---------- formatting helpers ---------- */
 function fmtLevel(symbol, n) {
   if (symbol === 'EURUSD') return n.toFixed(5);
@@ -653,6 +673,7 @@ function selectPost(id) {
    selection updates data + redraws overlays (no chart re-creation).
    ===================================================================== */
 let chart, candleSeries, ema9Series, priceLines = [], shellBuilt = false;
+let sdZonesPrimitive = null; // supply/demand zone overlay (Task 1.2)
 let emaOn = localStorage.getItem('aurum-ema') !== 'off'; // default ON
 
 /* Gold Panel SMMA lines (F1–F4) — colors/widths mirror Pine V.1 lines 4–41
@@ -705,6 +726,89 @@ function chartOptions() {
   };
 }
 
+/* =====================================================================
+   Task 1.2 — Supply/Demand zone overlay.
+   Lightweight Charts v4 has no native rectangle, so this is a Series Primitive
+   attached to candleSeries. Each zone is a full-width horizontal band spanning
+   its price range (bottom ↔ top), drawn UNDER the candles (zOrder 'bottom').
+     supply → red   fill rgba(239,68,68,0.15)  border rgba(239,68,68,0.4)
+     demand → green fill rgba(34,197,94,0.15)   border rgba(34,197,94,0.4)
+   A mitigated zone (price already closed through it) fades + gets a dashed
+   border, matching the design doc's "fade, keep visible" decision (D3).
+   The DB shape is {tf, low, high, type, mitigated}; we read high/low (with a
+   top/bottom alias for safety). ===================================================================== */
+function makeSDZonesPrimitive() {
+  let zones = [];
+  let series = null;
+  let requestUpdate = null;
+
+  const ZONE_STYLE = {
+    supply: { fill: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)' },
+    demand: { fill: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.4)' },
+  };
+
+  const renderer = {
+    draw(target) {
+      if (!series || !zones.length) return;
+      target.useBitmapCoordinateSpace(scope => {
+        const ctx = scope.context;
+        const vr = scope.verticalPixelRatio;
+        const w = scope.bitmapSize.width;
+        zones.forEach(z => {
+          const style = ZONE_STYLE[z.type] || ZONE_STYLE.demand;
+          const yA = series.priceToCoordinate(z.high);
+          const yB = series.priceToCoordinate(z.low);
+          if (yA == null || yB == null) return;
+          const top = Math.min(yA, yB) * vr;
+          const height = Math.abs(yB - yA) * vr;
+          if (height <= 0) return;
+          ctx.save();
+          // Mitigated zones fade out but stay on the chart for context (D3).
+          ctx.globalAlpha = z.mitigated ? 0.4 : 1;
+          ctx.fillStyle = style.fill;
+          ctx.fillRect(0, top, w, height);
+          ctx.strokeStyle = style.border;
+          ctx.lineWidth = Math.max(1, vr);
+          if (z.mitigated) ctx.setLineDash([Math.max(2, 4 * vr), Math.max(2, 4 * vr)]);
+          ctx.strokeRect(0, top, w, height);
+          ctx.restore();
+        });
+      });
+    },
+  };
+
+  const paneView = { renderer() { return renderer; }, zOrder() { return 'bottom'; } };
+
+  return {
+    attached(param) { series = param.series; requestUpdate = param.requestUpdate; },
+    detached() { series = null; requestUpdate = null; },
+    updateAllViews() {},
+    paneViews() { return [paneView]; },
+    // Extend the price scale so zones sitting above/below the candle range stay
+    // visible (TradingView shows S&D zones in context, not clipped off-screen).
+    autoscaleInfo() {
+      if (!zones.length) return null;
+      let minValue = Infinity, maxValue = -Infinity;
+      zones.forEach(z => {
+        minValue = Math.min(minValue, z.low, z.high);
+        maxValue = Math.max(maxValue, z.low, z.high);
+      });
+      if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return null;
+      return { priceRange: { minValue, maxValue } };
+    },
+    setZones(next) {
+      // Normalise DB rows → {type, high, low, mitigated}, drop unusable entries.
+      zones = (next || []).map(z => ({
+        type: z.type === 'supply' ? 'supply' : 'demand',
+        high: +(z.high != null ? z.high : z.top),
+        low:  +(z.low  != null ? z.low  : z.bottom),
+        mitigated: !!z.mitigated,
+      })).filter(z => Number.isFinite(z.high) && Number.isFinite(z.low));
+      if (requestUpdate) requestUpdate();
+    },
+  };
+}
+
 function buildDetailShell() {
   detailEl.innerHTML = `
     <div class="fade-in">
@@ -720,6 +824,8 @@ function buildDetailShell() {
         </div>
         <div class="relative">
           <div id="chart-container" class="w-full h-[320px] sm:h-[480px] rounded-xl overflow-hidden border border-line"></div>
+          <!-- Empty state when a บทวิเคราะห์ carries no candle data (Phase 4b Task 1.1). -->
+          <div id="chart-empty" class="hidden w-full h-[320px] sm:h-[480px] rounded-xl border border-line items-center justify-center text-sm text-t3">รอข้อมูลแท่งเทียน</div>
           <!-- F11 — Bull UP / Bear Down trend label (DOM badge, top-right of the chart) -->
           <div id="trend-label" class="absolute top-2 right-2 z-10 pointer-events-none"></div>
         </div>
@@ -735,6 +841,13 @@ function buildDetailShell() {
     wickUpColor: '#22c55e', wickDownColor: '#ef4444',
   });
   ema9Series = chart.addLineSeries({ color: '#a78bfa', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, title: 'EMA9' });
+
+  // Supply/Demand zone overlay (Task 1.2) — drawn under the candles, fed per
+  // selection in updateChart(). attachPrimitive is available in LWC v4.2.
+  if (typeof candleSeries.attachPrimitive === 'function') {
+    sdZonesPrimitive = makeSDZonesPrimitive();
+    candleSeries.attachPrimitive(sdZonesPrimitive);
+  }
 
   // SMMA 21/50/100/200 — one LineSeries each (mirrors ema9Series). Drawn above
   // candles in definition order; data is set per selection in updateChart().
@@ -893,17 +1006,111 @@ function clearOverlays() {
   candleSeries.setMarkers([]);
 }
 
-function updateChart(p) {
-  if (!chart || typeof LightweightCharts === 'undefined' || !window.MOCK_CANDLES) return;
-  const raw = window.MOCK_CANDLES[p.symbol] || window.MOCK_CANDLES.XAUUSD;
-  if (!raw || !raw.length) return;
-  const stepMin = (window.MOCK_CANDLES_META && window.MOCK_CANDLES_META.stepMin) || 15;
+/* Map analysis_posts.candles[] (live V.2 shape: {time, open, high, low, close};
+   `time` is already UNIX seconds) into the Lightweight Charts series shape.
+   Defensive about an alternate `timestamp_utc` field just in case. */
+function realCandlesFor(p) {
+  if (!Array.isArray(p.candles) || !p.candles.length) return null;
+  const out = p.candles.map(c => ({
+    time: typeof c.time === 'number'
+      ? c.time
+      : Math.floor(new Date(c.timestamp_utc).getTime() / 1000),
+    open: +c.open, high: +c.high, low: +c.low, close: +c.close,
+  })).filter(c => Number.isFinite(c.time) && Number.isFinite(c.close));
+  out.sort((a, b) => a.time - b.time);
+  return out.length ? out : null;
+}
 
-  // Anchor the walk so the marker candle sits at the analysis' current price —
-  // keeps จุดสำคัญ / โซนเป้าหมาย / ความเสี่ยง lines inside the visible range.
-  const markerIdx = Math.max(0, raw.length - 1 - Math.round((p.minsAgo || 0) / stepMin));
-  const delta = p.currentPrice - raw[markerIdx].close;
-  const data = raw.map(c => ({ time: c.time, open: c.open + delta, high: c.high + delta, low: c.low + delta, close: c.close + delta }));
+function showChartEmpty(empty) {
+  const container = document.getElementById('chart-container');
+  const placeholder = document.getElementById('chart-empty');
+  if (container) container.classList.toggle('hidden', empty);
+  if (placeholder) { placeholder.classList.toggle('hidden', !empty); placeholder.classList.toggle('flex', empty); }
+  if (empty) {
+    const tl = document.getElementById('trend-label');
+    if (tl) tl.innerHTML = '';
+  }
+}
+
+/* Short marker label per Gold Panel pattern kind (matches the client preview's
+   3s-Bull/3s-Bear text; engulfing/pin get compact labels). */
+function patternLabel(kind) {
+  switch (kind) {
+    case '3ls_bull': return '3s-Bull';
+    case '3ls_bear': return '3s-Bear';
+    case 'engulf_bull':
+    case 'engulf_bear': return 'Engulf';
+    case 'pin_bar': return 'Pin';
+    default: return kind || '';
+  }
+}
+
+/* Task 1.3 — map analysis_posts.pattern_markers (live shape {kind, time, price})
+   into Lightweight Charts markers. Direction comes from the kind's bull/bear
+   suffix (the DB has no separate direction field). Returns null when the post
+   carries no server markers, so the caller can fall back to the client preview.
+   Marker times are snapped to the nearest candle time so they land on a bar. */
+function serverPatternMarkers(p, data) {
+  if (!Array.isArray(p.pattern_markers) || !p.pattern_markers.length) return null;
+  if (!data || !data.length) return [];
+  const times = data.map(c => c.time);
+  function snap(t) {
+    if (times.indexOf(t) !== -1) return t;
+    let best = times[0], bd = Math.abs(times[0] - t);
+    for (let i = 1; i < times.length; i++) {
+      const d = Math.abs(times[i] - t);
+      if (d < bd) { bd = d; best = times[i]; }
+    }
+    return best;
+  }
+  return p.pattern_markers.map(m => {
+    const kind = m.kind || m.type || '';
+    const bull = /bull/i.test(kind) || m.direction === 'bullish' || m.side === 'bull';
+    const t = typeof m.time === 'number'
+      ? m.time
+      : Math.floor(new Date(m.timestamp_utc).getTime() / 1000);
+    if (!Number.isFinite(t)) return null;
+    return {
+      kind: kind || (bull ? 'bull' : 'bear'),
+      time: snap(t),
+      position: bull ? 'belowBar' : 'aboveBar',
+      color: bull ? '#22c55e' : '#ef4444',
+      shape: bull ? 'arrowUp' : 'arrowDown',
+      text: patternLabel(kind),
+      size: 2,
+    };
+  }).filter(Boolean);
+}
+
+function updateChart(p) {
+  if (!chart || typeof LightweightCharts === 'undefined') return;
+
+  // Task 1.1 — real candles from analysis_posts take precedence over the mock feed.
+  const real = realCandlesFor(p);
+
+  // A post sourced from analysis_posts but carrying no candles → hide the chart
+  // and show "รอข้อมูลแท่งเทียน" (Task 1.1 fallback).
+  if (p.isReal && !real) { showChartEmpty(true); markerCtx = null; return; }
+  showChartEmpty(false);
+
+  let data, markerIdx;
+  if (real) {
+    // Real candles are used as-is — no anchoring/delta. The marker candle is the
+    // most recent (last closed) bar.
+    data = real;
+    markerIdx = data.length - 1;
+  } else {
+    if (!window.MOCK_CANDLES) return;
+    const raw = window.MOCK_CANDLES[p.symbol] || window.MOCK_CANDLES.XAUUSD;
+    if (!raw || !raw.length) return;
+    const stepMin = (window.MOCK_CANDLES_META && window.MOCK_CANDLES_META.stepMin) || 15;
+
+    // Anchor the walk so the marker candle sits at the analysis' current price —
+    // keeps จุดสำคัญ / โซนเป้าหมาย / ความเสี่ยง lines inside the visible range.
+    markerIdx = Math.max(0, raw.length - 1 - Math.round((p.minsAgo || 0) / stepMin));
+    const delta = p.currentPrice - raw[markerIdx].close;
+    data = raw.map(c => ({ time: c.time, open: c.open + delta, high: c.high + delta, low: c.low + delta, close: c.close + delta }));
+  }
 
   const fmt = PRICE_FMT[p.symbol] || PRICE_FMT.XAUUSD;
   candleSeries.applyOptions({ priceFormat: { type: 'price', precision: fmt.precision, minMove: fmt.minMove } });
@@ -929,6 +1136,9 @@ function updateChart(p) {
   p.targetZones.forEach((z, i) => addPriceLine(z.level, '#d4af37', LightweightCharts.LineStyle.Solid, 1, 'Z' + (i + 1) + (z.hit ? ' ✓' : '')));
   addPriceLine(p.riskLevel, '#ef4444', LightweightCharts.LineStyle.Dashed, 2, 'ความเสี่ยง ' + fmtLevel(p.symbol, p.riskLevel));
 
+  // Task 1.2 — supply/demand zone bands (real V.2 posts only; samples carry none).
+  if (sdZonesPrimitive) sdZonesPrimitive.setZones(p.sd_zones || []);
+
   // Existing analysis direction marker (ขาขึ้น/ขาลง) at the anchor candle.
   const directionMarker = {
     time: data[markerIdx].time,
@@ -937,10 +1147,13 @@ function updateChart(p) {
     shape: p.view === 'bullish' ? 'arrowUp' : 'arrowDown',
     text: p.view === 'bullish' ? 'ขาขึ้น' : 'ขาลง',
   };
-  // F6–F9 pattern markers, detected over the CLOSED candles (non-repaint).
-  // detectPatterns is intentionally decoupled from rendering so a future
-  // Pine V.3 webhook can supply the array instead (Phase 4 Step 4, §6).
-  const patternMarkers = (typeof detectPatterns === 'function' ? detectPatterns(data) : []);
+  // Task 1.3 / D1 Hybrid — server-delivered pattern_markers are authoritative
+  // and OVERWRITE the client-detected preview when present. Demo samples (no
+  // server markers) keep using the client detectPatterns() preview.
+  const serverMarkers = serverPatternMarkers(p, data);
+  const patternMarkers = serverMarkers !== null
+    ? serverMarkers
+    : (typeof detectPatterns === 'function' ? detectPatterns(data) : []);
   markerCtx = { directionMarker, patternMarkers };
   renderMarkers();
 
@@ -1163,9 +1376,14 @@ function updateUnreadBadge() {
 function handleInsert(post) {
   const p = { ...post, unread: true, isNew: true };
   POSTS.unshift(p);
-  // auto-follow same symbol in the right pane
+  // Auto-follow same symbol in the right pane — but NEVER steal the view from a
+  // live (server) post. Demo/preview inserts must not override an authoritative
+  // analysis_posts row (this is what hijacked deep-linked real posts before).
+  // Phase 4c — also never auto-follow at all while deep-linked, so a real
+  // realtime INSERT (the future subscribeRealtime caller) can't move the chart
+  // off the pinned post either; the row still lands in the list, just unselected.
   const cur = getById(state.selected);
-  if (cur && cur.symbol === p.symbol) state.selected = p.id;
+  if (!isDeepLinked && cur && cur.symbol === p.symbol && !cur.isReal) state.selected = p.id;
   renderList();
   if (state.selected === p.id) renderDetail();
   showToast(p);
@@ -1186,7 +1404,10 @@ function handleConfirm(id) {
 }
 
 /* Backend wiring stub (Phase 3). Kept inert here — preview uses the demo
-   simulator below. analysis_posts lives in the aurum-customers project. */
+   simulator below. analysis_posts lives in the aurum-customers project.
+   Phase 4c note: when this is wired, handleInsert already refuses to auto-follow
+   while isDeepLinked, so a live INSERT cannot move the chart off a pinned post;
+   handleConfirm only repaints the already-selected post, so it is safe too. */
 function subscribeRealtime(client) {
   // client.channel('analysis_posts')
   //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'analysis_posts' }, ({ new: row }) => handleInsert(mapRow(row)))
@@ -1211,6 +1432,10 @@ const DEMO_POOL = [
 ];
 let demoIdx = 0;
 function simulateIncoming() {
+  // Phase 4c — sticky deep link: no demo/auto inserts may touch a deep-linked
+  // view. Gating here covers BOTH the boot auto-demo timer and the manual
+  // จำลอง button, so the linked live post can never be hijacked by a mock post.
+  if (isDeepLinked) return;
   const base = DEMO_POOL[demoIdx % DEMO_POOL.length];
   demoIdx++;
   const id = 'an-' + (++incomingSeq);
@@ -1256,14 +1481,151 @@ function activateTab(which) {
 tabList.addEventListener('click', () => activateTab('list'));
 tabDetail.addEventListener('click', () => activateTab('detail'));
 
+/* =====================================================================
+   REAL FEED — analysis_posts (Supabase, project etwlurpjrqlvrxgsbhkd).
+   Phase 4b wires the live V.2 feed in front of the demo samples: real rows
+   (which carry candles[] / pattern_markers[] / sd_zones[]) are prepended and
+   render their full Gold Panel payload on the chart; the demo samples remain
+   as fallback content. RLS allows anon SELECT, so the public anon key is used
+   (read-only, no session) — same public-key pattern as the auth gate above.
+   ===================================================================== */
+const FEED_URL  = 'https://etwlurpjrqlvrxgsbhkd.supabase.co';
+const FEED_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d2x1cnBqcnFsdnJ4Z3NiaGtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMTA3MjIsImV4cCI6MjA5Mzg4NjcyMn0.ANq_Ue-0-_jnAcOTa0z5-rN5Lhda3K0Fu55TkqDv0zY';
+let feedClient = null;
+function getFeedClient() {
+  if (feedClient) return feedClient;
+  if (!window.supabase || !window.supabase.createClient) return null;
+  feedClient = window.supabase.createClient(FEED_URL, FEED_ANON, { auth: { persistSession: false } });
+  return feedClient;
+}
+
+/* Map one analysis_posts row (live V.2 schema) into the room's post shape.
+   The raw V.2 arrays (candles / pattern_markers / sd_zones) are carried through
+   untouched for the chart layer (Tasks 1.1–1.3). Fields the DB does not hold
+   (stats / market / volatility / title) get sensible neutral defaults. */
+function mapRow(row) {
+  const candles = Array.isArray(row.candles) ? row.candles : [];
+  const last = candles.length ? candles[candles.length - 1] : null;
+  const conf100 = typeof row.confidence === 'number' ? row.confidence : 0;
+  const stars = Math.max(1, Math.min(5, Math.round(conf100 / 20) || 1));
+  const tz = Array.isArray(row.target_zones) ? row.target_zones : [];
+  const biasWord = row.bias === 'bullish' ? 'ขาขึ้น' : 'ขาลง';
+  const minsAgo = row.timestamp_utc
+    ? Math.max(0, Math.round((Date.now() - new Date(row.timestamp_utc).getTime()) / 60000))
+    : 0;
+  const keyLevel = typeof row.key_level === 'number' ? row.key_level : (last ? +last.close : 0);
+  const riskNum = typeof row.invalidation_price === 'number' ? row.invalidation_price : keyLevel;
+  const curr = last ? +last.close : keyLevel;
+  let volatility = 0;
+  if (candles.length) {
+    const hi = Math.max.apply(null, candles.map(c => +c.high));
+    const lo = Math.min.apply(null, candles.map(c => +c.low));
+    if (Number.isFinite(hi) && Number.isFinite(lo)) volatility = +(hi - lo).toFixed(2);
+  }
+  return {
+    id: row.id, symbol: row.symbol, timeframe: row.timeframe,
+    minsAgo,
+    view: row.bias === 'bullish' ? 'bullish' : 'bearish',
+    confidence: stars,
+    rewardRatio: row.rr_ratio != null ? row.rr_ratio : '—',
+    keyLevel, currentPrice: curr, riskLevel: riskNum,
+    riskCategory: row.risk_level || null,
+    // Note: target_zones labels in the DB ("TP1"/"TP2") are deliberately NOT
+    // surfaced — zoneRows() renders Z1/Z2 from the index, so only the price shows.
+    targetZones: tz.map(z => ({ level: +z.price, hit: false })),
+    confirmed: true,
+    stats: [],
+    market: { emoji: '•', th: 'ตลาด', en: 'live' },
+    volatility,
+    title: `${row.symbol} · มุมมอง${biasWord} · ${row.timeframe}`,
+    note: row.note || '',
+    // Raw V.2 payload carried through for the chart layer.
+    candles,
+    sd_zones: Array.isArray(row.sd_zones) ? row.sd_zones : [],
+    pattern_markers: Array.isArray(row.pattern_markers) ? row.pattern_markers : [],
+    isReal: true, unread: false, isNew: false,
+  };
+}
+
+let deepLinkDone = false;
+// Wrapper so the feed loader can request the ?post_id deep link without caring
+// whether the handler is wired yet (the real handler lands in Task 1.4).
+function runDeepLink() { if (typeof applyDeepLink === 'function') applyDeepLink(); }
+
+async function loadRealFeed() {
+  const client = getFeedClient();
+  if (!client) { runDeepLink(); return; }
+  try {
+    const { data, error } = await client
+      .from('analysis_posts')
+      .select('*')
+      .order('timestamp_utc', { ascending: false })
+      .limit(50);
+    if (error || !Array.isArray(data) || !data.length) { runDeepLink(); return; }
+    const mapped = data.map(mapRow);
+    const realIds = new Set(mapped.map(p => p.id));
+    // Prepend real rows; keep demo samples (no id overlap) as fallback content.
+    POSTS = mapped.concat(POSTS.filter(p => !realIds.has(p.id)));
+    if (!getById(state.selected)) state.selected = POSTS[0].id;
+    renderList();
+    renderDetail();
+  } catch (e) { /* network/transient — fall back to demo samples already rendered */ }
+  runDeepLink();
+}
+
+/* =====================================================================
+   Task 1.4 — ?post_id deep link (e.g. opened from Telegram). On mount, if the
+   URL carries a post_id that matches a loaded post, clear any filter that would
+   hide it, select it as active, scroll its list row into view and highlight it.
+   Runs once (deepLinkDone), invoked by runDeepLink() after the feed resolves so
+   real rows are present; sample ids already in POSTS at boot also resolve.
+   ===================================================================== */
+function applyDeepLink() {
+  if (deepLinkDone) return;
+  let pid = null;
+  try { pid = new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
+  if (!pid) { deepLinkDone = true; return; }
+  const target = getById(pid);
+  if (!target) return; // not loaded — nothing to scroll to
+
+  deepLinkDone = true;
+  // Clear filters that could hide the target row.
+  state.symbol = 'all';
+  const symSel = document.getElementById('f-symbol');
+  if (symSel) symSel.value = 'all';
+  if (state.conf > target.confidence) {
+    state.conf = 0;
+    document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('bg-gold', 'text-bg', 'border-gold'));
+    const allBtn = document.querySelector('.conf-btn');
+    if (allBtn) allBtn.classList.add('bg-gold', 'text-bg', 'border-gold');
+  }
+
+  selectPost(pid); // sets active, re-renders list + detail (and shows detail on mobile)
+
+  // Scroll the row into view + highlight once the re-render has placed it.
+  requestAnimationFrame(() => {
+    const row = document.getElementById('row-' + pid);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.add('confirm-glow');
+    setTimeout(() => row.classList.remove('confirm-glow'), 1700);
+  });
+}
+
 /* ---------- boot ---------- */
 renderList();
 renderDetail();
 maybeRequestNotify();
-// Phase 3: subscribeRealtime(<aurum-customers client>);
-// Demo: confirm the first (pending) post, then show one incoming alert.
-setTimeout(() => handleConfirm('an-001'), 5000);
-setTimeout(simulateIncoming, 9000);
+loadRealFeed();
+// Demo (preview only): confirm the first pending post, then show one incoming
+// alert. Skipped in deep-link sticky mode (isDeepLinked) so the linked live post
+// is not disturbed and the smoke test stays clean. The manual จำลอง button is
+// also gated inside simulateIncoming, so with no ?post_id the full demo flow
+// (this confirm + insert + the button) is 100% unchanged.
+if (!isDeepLinked) {
+  setTimeout(() => handleConfirm('an-001'), 5000);
+  setTimeout(simulateIncoming, 9000);
+}
 </script>
 
 </body>
