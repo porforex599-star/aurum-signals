@@ -505,10 +505,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
             <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="5">5★</button>
           </div>
         </div>
-        <button id="simulate-btn" class="w-full text-[11px] text-goldSoft bg-goldBg border border-goldDim rounded-lg py-1.5 hover:bg-goldDim hover:text-bg transition flex items-center justify-center gap-1.5">
-          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-          จำลองบทวิเคราะห์ใหม่ (เดโม)
-        </button>
       </div>
       <!-- List -->
       <div id="list" class="flex-1 min-h-0 overflow-y-auto scroll-y p-2 space-y-1.5"></div>
@@ -536,17 +532,14 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
 <!-- TradingView Lightweight Charts (MIT) — lets us paint overlays ON the chart -->
 <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-<!-- Mock OHLC candles for 5 symbols (Phase 3 swaps in real candles) -->
-<script src="/js/mock-candles.js"></script>
 <!-- Gold Panel pattern detection (F6–F9) — pure, separated from rendering so a
      future Pine V.3 webhook can replace the array (Phase 4 Step 4). -->
 <script src="/js/pattern-markers.js"></script>
 <script>
 /* =====================================================================
-   Phase 2.5 — Lightweight Charts with on-chart overlays, on top of the
-   Phase 2 annotation panel + real-time alert system.
-   Backend wiring (Supabase Realtime on analysis_posts) lands in Phase 3;
-   handleInsert / handleConfirm are the hooks the real subscription calls.
+   Lightweight Charts with on-chart overlays, on top of the annotation
+   panel + real-time alert system. The feed is real analysis_posts only
+   (loadRealFeed); handleInsert is the hook the live INSERT subscription calls.
    ===================================================================== */
 
 const META = { weekCount: 40 }; // หน้าสรุปสัปดาห์ (เดโม) — Phase 3 จะดึงจริง
@@ -560,133 +553,17 @@ const PRICE_FMT = {
   SP500:  { precision: 1, minMove: 0.1 },
 };
 
-/* Each item mirrors a row of analysis_posts (see sql/2026_06_06_analysis_posts.sql). */
-const SAMPLE_ANALYSES = [
-  { id:'an-001', symbol:'XAUUSD', timeframe:'M15', minsAgo:0, view:'bearish', confidence:4, rewardRatio:1.7,
-    keyLevel:4468.53, currentPrice:4468.20, riskLevel:4478.41,
-    targetZones:[{level:4462.60,hit:false},{level:4456.67,hit:false},{level:4450.74,hit:false}],
-    confirmed:false,
-    // Phase 5b preview — sample chart snapshot so the "ดูภาพ Chart" button is
-    // clickable in the demo; live posts get this from analysis_posts.chart_image_url.
-    chartImageUrl:'https://etwlurpjrqlvrxgsbhkd.supabase.co/storage/v1/object/public/analysis-snapshots/302220d0-4a60-40bb-8141-a5fb46277d3b.png',
-    chartImageGeneratedAt:'2026-06-11T07:30:00Z',
-    stats:[{label:'Z1',pct:67,count:340},{label:'Z2',pct:44,count:224},{label:'Z3',pct:32,count:164}],
-    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:5.13,
-    title:'ทองคำแตะระดับสำคัญ มุมมองขาลงระยะสั้น',
-    note:'ราคาขึ้นทดสอบจุดสำคัญบริเวณ 4,468 แล้วเริ่มอ่อนแรง มุมมองขาลงระยะสั้นเข้าหาโซนเป้าหมายด้านล่าง ระดับความเสี่ยงอยู่เหนือจุดสำคัญ บริหารความเสี่ยงสำคัญที่สุด' },
-
-  { id:'an-002', symbol:'EURUSD', timeframe:'M30', minsAgo:24, view:'bearish', confidence:5, rewardRatio:1.5,
-    keyLevel:1.08450, currentPrice:1.08512, riskLevel:1.08650,
-    targetZones:[{level:1.08300,hit:true},{level:1.08150,hit:false},{level:1.08000,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-06T11:30:00Z',
-    stats:[{label:'Z1',pct:71,count:512},{label:'Z2',pct:49,count:353},{label:'Z3',pct:30,count:216}],
-    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:7.42,
-    title:'ยูโรปฏิเสธแนวต้าน มุมมองขาลงมีน้ำหนัก',
-    note:'แนวต้านบริเวณ 1.0850 ปฏิเสธราคาชัดเจน มุมมองขาลงมีน้ำหนักตราบใดที่ยังอยู่ใต้จุดสำคัญ โซนเป้าหมายแรกถูกแตะแล้ว' },
-
-  { id:'an-003', symbol:'BTCUSD', timeframe:'H1', minsAgo:60, view:'bullish', confidence:3, rewardRatio:2.0,
-    keyLevel:96420, currentPrice:96380, riskLevel:95600,
-    targetZones:[{level:97200,hit:false},{level:98000,hit:false},{level:98800,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-06T11:00:00Z',
-    stats:[{label:'Z1',pct:58,count:288},{label:'Z2',pct:39,count:194},{label:'Z3',pct:24,count:121}],
-    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.05,
-    title:'บิตคอยน์ทำจุดต่ำยกตัว โครงสร้างขาขึ้นเชิงรอบ',
-    note:'โครงสร้าง H1 ยังทำจุดสูงและจุดต่ำยกตัว มุมมองขาขึ้นเชิงรอบ ความเชื่อมั่นปานกลางเพราะใกล้แนวต้านสำคัญ' },
-
-  { id:'an-004', symbol:'XAUUSD', timeframe:'M5', minsAgo:120, view:'bearish', confidence:3, rewardRatio:1.4,
-    keyLevel:4475.00, currentPrice:4470.10, riskLevel:4480.00,
-    targetZones:[{level:4470.00,hit:true},{level:4465.00,hit:true},{level:4460.00,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-06T10:00:00Z',
-    stats:[{label:'Z1',pct:64,count:301},{label:'Z2',pct:41,count:198},{label:'Z3',pct:28,count:139}],
-    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:6.88,
-    title:'ทองคำปรับฐานระยะสั้นใต้แนวต้าน',
-    note:'ภาพ M5 ราคาอ่อนแรงใต้แนวต้าน มุมมองขาลงระยะสั้นเพื่อปรับฐาน สองโซนเป้าหมายแรกถูกแตะแล้ว' },
-
-  { id:'an-005', symbol:'EURUSD', timeframe:'H4', minsAgo:240, view:'bullish', confidence:4, rewardRatio:2.3,
-    keyLevel:1.07900, currentPrice:1.07965, riskLevel:1.07550,
-    targetZones:[{level:1.08200,hit:true},{level:1.08600,hit:false},{level:1.09000,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-06T08:00:00Z',
-    stats:[{label:'Z1',pct:69,count:430},{label:'Z2',pct:46,count:286},{label:'Z3',pct:31,count:193}],
-    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:3.74,
-    title:'ยูโรสะสมกำลังเหนือจุดสำคัญ H4',
-    note:'กรอบ H4 ราคายืนเหนือจุดสำคัญและสร้างฐานสะสมกำลัง มุมมองขาขึ้นเชิงโครงสร้าง อัตราส่วนน่าสนใจ' },
-
-  { id:'an-006', symbol:'BTCUSD', timeframe:'M15', minsAgo:360, view:'bearish', confidence:2, rewardRatio:1.3,
-    keyLevel:97800, currentPrice:97910, riskLevel:98400,
-    targetZones:[{level:97000,hit:true},{level:96500,hit:false},{level:96000,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-06T06:00:00Z',
-    stats:[{label:'Z1',pct:55,count:240},{label:'Z2',pct:36,count:151},{label:'Z3',pct:22,count:97}],
-    market:{emoji:'🔴',th:'ผันผวนสูง',en:'volatile'}, volatility:9.21,
-    title:'บิตคอยน์ชะลอใต้แนวต้าน มุมมองขาลงระยะสั้น',
-    note:'ภาพ M15 ราคาชะลอตัวใต้แนวต้านและทำจุดสูงต่ำลง มุมมองขาลงระยะสั้น ความเชื่อมั่นไม่สูงเพราะแนวโน้มใหญ่ยังไม่เปลี่ยน' },
-
-  { id:'an-007', symbol:'XAUUSD', timeframe:'H1', minsAgo:480, view:'bullish', confidence:5, rewardRatio:2.5,
-    keyLevel:4430.00, currentPrice:4432.40, riskLevel:4418.00,
-    targetZones:[{level:4445.00,hit:true},{level:4460.00,hit:true},{level:4475.00,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-06T04:00:00Z',
-    stats:[{label:'Z1',pct:73,count:560},{label:'Z2',pct:52,count:401},{label:'Z3',pct:35,count:268}],
-    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.62,
-    title:'ทองคำสร้างฐานใหญ่ มุมมองขาขึ้นเชิงโครงสร้าง',
-    note:'กรอบ H1 ราคาสร้างฐานสะสมเหนือจุดสำคัญและทำจุดสูงยกตัว มุมมองขาขึ้นเชิงโครงสร้าง ความเชื่อมั่นสูง' },
-
-  { id:'an-008', symbol:'EURUSD', timeframe:'M15', minsAgo:600, view:'bearish', confidence:3, rewardRatio:1.6,
-    keyLevel:1.08200, currentPrice:1.08240, riskLevel:1.08360,
-    targetZones:[{level:1.07950,hit:true},{level:1.07800,hit:true},{level:1.07650,hit:true}],
-    confirmed:true, confirmedAt:'2026-06-06T02:00:00Z',
-    stats:[{label:'Z1',pct:66,count:318},{label:'Z2',pct:43,count:205},{label:'Z3',pct:29,count:140}],
-    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:6.05,
-    title:'ยูโรอ่อนแรงใต้จุดสำคัญ ครบทุกโซนเป้าหมาย',
-    note:'ภาพ M15 ราคาหลุดจุดสำคัญและรีเทสต์ไม่ผ่าน มุมมองขาลงเดินครบทั้งสามโซนเป้าหมาย เป็นรอบที่สมบูรณ์' },
-
-  { id:'an-009', symbol:'BTCUSD', timeframe:'H4', minsAgo:720, view:'bullish', confidence:4, rewardRatio:2.1,
-    keyLevel:94500, currentPrice:94720, riskLevel:93200,
-    targetZones:[{level:96000,hit:true},{level:97500,hit:false},{level:99000,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-05T22:00:00Z',
-    stats:[{label:'Z1',pct:62,count:355},{label:'Z2',pct:42,count:241},{label:'Z3',pct:27,count:155}],
-    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.88,
-    title:'บิตคอยน์ยืนเหนือฐาน H4 มุมมองขาขึ้นรอบใหม่',
-    note:'กรอบ H4 ราคายืนเหนือจุดสำคัญและเริ่มรอบขาขึ้นใหม่ โซนเป้าหมายแรกถูกแตะแล้ว อัตราส่วนน่าสนใจ' },
-
-  { id:'an-010', symbol:'XAUUSD', timeframe:'M30', minsAgo:900, view:'bearish', confidence:3, rewardRatio:1.5,
-    keyLevel:4490.00, currentPrice:4486.30, riskLevel:4498.00,
-    targetZones:[{level:4480.00,hit:true},{level:4472.00,hit:false},{level:4464.00,hit:false}],
-    confirmed:true, confirmedAt:'2026-06-05T20:00:00Z',
-    stats:[{label:'Z1',pct:60,count:277},{label:'Z2',pct:40,count:184},{label:'Z3',pct:26,count:120}],
-    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:6.31,
-    title:'ทองคำย่อจากแนวต้าน M30 มุมมองขาลง',
-    note:'ภาพ M30 ราคาย่อจากแนวต้านบริเวณจุดสำคัญ มุมมองขาลงเข้าหาโซนเป้าหมาย ระดับความเสี่ยงเหนือจุดสำคัญ' },
-];
-
-/* Runtime state */
-let POSTS = SAMPLE_ANALYSES.map(a => ({ ...a, unread: false, isNew: false }));
-let incomingSeq = 100;
+/* Runtime state — populated exclusively from analysis_posts (loadRealFeed). */
+let POSTS = [];
 function getById(id) { return POSTS.find(p => p.id === id); }
 
-const state = { symbol: 'all', sort: 'new', conf: 0, selected: POSTS[0].id };
+const state = { symbol: 'all', sort: 'new', conf: 0, selected: null };
 
-/* =====================================================================
-   Phase 4c — DEEP LINK STICKY MODE (single source of truth)
-   ---------------------------------------------------------------------
-   ROOT CAUSE: when opened from Telegram with ?post_id=..., the page must
-   pin the chart + detail to that one authoritative analysis_posts row.
-   The demo simulator (boot auto-demo at +9s AND the manual จำลอง button)
-   inserts a mock XAUUSD post via handleInsert(); its auto-follow then
-   switched state.selected to the mock (same symbol) and renderDetail()
-   repainted BOTH panels — chart fell back to MOCK_CANDLES + 4472.10.
-   The earlier fix (dd8739a) guarded the boot timer + auto-follow, but the
-   guards were scattered/implicit and left the manual button and any future
-   realtime/polling path open.
-   WHY this flag: compute "is this a deep-link load?" exactly once, then
-   block EVERY automatic state-change to the selection from that flag. Only
-   an explicit user click on another post card (selectPost from the row's
-   click handler) is allowed to move off the linked post. With no ?post_id
-   the flag is false and the demo flow is 100% unchanged. */
-let isDeepLinked = false;
+/* Deep link: when opened from Telegram with ?post_id=..., applyDeepLink() pins
+   the chart + detail to that authoritative analysis_posts row and auto-opens the
+   chart-image modal. deepLinkPid also tags the scrolled row with a 📸 cue. */
 let deepLinkPid = null;
-try {
-  deepLinkPid = new URLSearchParams(location.search).get('post_id');
-  isDeepLinked = !!deepLinkPid;
-} catch (e) { /* ignore */ }
+try { deepLinkPid = new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
 
 /* ---------- formatting helpers ---------- */
 function fmtLevel(symbol, n) {
@@ -697,6 +574,23 @@ function fmtLevel(symbol, n) {
 function stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
 function nearKey(p) { return Math.abs(p.currentPrice - p.keyLevel) / p.keyLevel <= 0.0005; }
 function todayCount() { return POSTS.filter(p => p.minsAgo < 1440).length; }
+
+/* Relative age from the DB's created_at (the row's real insertion time), NOT the
+   payload timestamp_utc which Pine V.2 can set to an arbitrary bar time. */
+function formatAge(createdAt) {
+  if (!createdAt) return '';
+  const ms = Date.now() - new Date(createdAt).getTime();
+  if (!Number.isFinite(ms)) return '';
+  const sec = Math.max(0, Math.floor(ms / 1000));
+  if (sec < 60) return sec + ' วินาทีที่แล้ว';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min + ' นาทีที่แล้ว';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + ' ชม. ที่แล้ว';
+  return Math.floor(hr / 24) + ' วันที่แล้ว';
+}
+/* Computed fresh on every render so the label stays correct as time passes. */
+function ageLabel(p) { return p.createdAt ? formatAge(p.createdAt) : (p.timeAgo || ''); }
 
 function viewTagSm(view) {
   return view === 'bullish'
@@ -723,7 +617,10 @@ function renderList() {
   const list = visibleList();
   listEl.innerHTML = '';
   if (!list.length) {
-    listEl.innerHTML = '<p class="text-xs text-t3 text-center py-8">ไม่พบบทวิเคราะห์ตามตัวกรอง</p>';
+    // No data at all vs. everything hidden by the current filters.
+    listEl.innerHTML = POSTS.length
+      ? '<p class="text-xs text-t3 text-center py-8">ไม่พบบทวิเคราะห์ตามตัวกรอง</p>'
+      : '<p class="text-sm text-t3 text-center py-10 px-4 leading-relaxed">ยังไม่มีบทวิเคราะห์ในขณะนี้ — โปรดรอ Pine V.2 alert ใหม่</p>';
     updateUnreadBadge();
     return;
   }
@@ -742,7 +639,7 @@ function renderList() {
           ${p.unread ? '<span class="text-[9px] bg-gold text-bg font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>' : ''}
           ${(deepLinkPid && p.id === deepLinkPid && hasChartImage(p)) ? '<span title="มีภาพ chart" class="text-[11px]">📸</span>' : ''}
         </span>
-        <span class="text-[10px] text-t3 font-mono">${p.timeAgo || (p.minsAgo + ' นาทีที่แล้ว')}</span>
+        <span class="text-[10px] text-t3 font-mono">${ageLabel(p)}</span>
       </div>
       <div class="flex items-center justify-between">
         ${viewTagSm(p.view)}
@@ -1185,32 +1082,17 @@ function serverPatternMarkers(p, data) {
 function updateChart(p) {
   if (!chart || typeof LightweightCharts === 'undefined') return;
 
-  // Task 1.1 — real candles from analysis_posts take precedence over the mock feed.
+  // Inline chart renders strictly from analysis_posts.candles[] (Phase 4b).
   const real = realCandlesFor(p);
 
-  // A post sourced from analysis_posts but carrying no candles → hide the chart
-  // and show "รอข้อมูลแท่งเทียน" (Task 1.1 fallback).
-  if (p.isReal && !real) { showChartEmpty(true); markerCtx = null; return; }
+  // No candles on the row → show "รอข้อมูลแท่งเทียน". Never synthesize candles.
+  if (!real) { showChartEmpty(true); markerCtx = null; return; }
   showChartEmpty(false);
 
-  let data, markerIdx;
-  if (real) {
-    // Real candles are used as-is — no anchoring/delta. The marker candle is the
-    // most recent (last closed) bar.
-    data = real;
-    markerIdx = data.length - 1;
-  } else {
-    if (!window.MOCK_CANDLES) return;
-    const raw = window.MOCK_CANDLES[p.symbol] || window.MOCK_CANDLES.XAUUSD;
-    if (!raw || !raw.length) return;
-    const stepMin = (window.MOCK_CANDLES_META && window.MOCK_CANDLES_META.stepMin) || 15;
-
-    // Anchor the walk so the marker candle sits at the analysis' current price —
-    // keeps จุดสำคัญ / โซนเป้าหมาย / ความเสี่ยง lines inside the visible range.
-    markerIdx = Math.max(0, raw.length - 1 - Math.round((p.minsAgo || 0) / stepMin));
-    const delta = p.currentPrice - raw[markerIdx].close;
-    data = raw.map(c => ({ time: c.time, open: c.open + delta, high: c.high + delta, low: c.low + delta, close: c.close + delta }));
-  }
+  // Real candles are used as-is — no anchoring/delta. The marker candle is the
+  // most recent (last closed) bar.
+  const data = real;
+  const markerIdx = data.length - 1;
 
   const fmt = PRICE_FMT[p.symbol] || PRICE_FMT.XAUUSD;
   candleSeries.applyOptions({ priceFormat: { type: 'price', precision: fmt.precision, minMove: fmt.minMove } });
@@ -1295,7 +1177,7 @@ function topHtml(p) {
         <div class="w-11 h-11 rounded-xl bg-gold text-bg flex items-center justify-center font-mono font-bold flex-shrink-0">${p.symbol.slice(0,3)}</div>
         <div class="min-w-0">
           <h2 class="font-mono text-xl font-semibold text-warm leading-none">${p.symbol}</h2>
-          <p class="text-[11px] text-t3 mt-1">บทวิเคราะห์ · ${p.timeframe} · ${p.timeAgo || (p.minsAgo + ' นาทีที่แล้ว')}</p>
+          <p class="text-[11px] text-t3 mt-1">บทวิเคราะห์ · ${p.timeframe} · ${ageLabel(p)}</p>
         </div>
       </div>
       ${confBadgeHtml(p)}
@@ -1320,7 +1202,7 @@ function bottomHtml(p) {
         <div class="flex items-center gap-2 flex-wrap text-[13px]">
           <span class="font-mono text-warm">📊 ${p.symbol}</span>
           <span class="text-t3">·</span><span class="text-warmDim">${p.timeframe}</span>
-          <span class="text-t3">·</span><span class="text-warmDim">${p.timeAgo || (p.minsAgo + ' นาทีที่แล้ว')}</span>
+          <span class="text-t3">·</span><span class="text-warmDim">${ageLabel(p)}</span>
           ${confBadgeHtml(p)}
         </div>
         <div class="flex items-center gap-x-5 gap-y-1 flex-wrap text-[13px]">
@@ -1596,20 +1478,16 @@ function updateUnreadBadge() {
 }
 
 /* =====================================================================
-   Realtime hooks — the real Supabase subscription (Phase 3) will call
-   these directly from its INSERT / UPDATE callbacks.
+   Realtime hooks — the live analysis_posts subscription (subscribeRealtime
+   below) calls handleInsert from its INSERT callback.
    ===================================================================== */
 function handleInsert(post) {
   const p = { ...post, unread: true, isNew: true };
   POSTS.unshift(p);
-  // Auto-follow same symbol in the right pane — but NEVER steal the view from a
-  // live (server) post. Demo/preview inserts must not override an authoritative
-  // analysis_posts row (this is what hijacked deep-linked real posts before).
-  // Phase 4c — also never auto-follow at all while deep-linked, so a real
-  // realtime INSERT (the future subscribeRealtime caller) can't move the chart
-  // off the pinned post either; the row still lands in the list, just unselected.
-  const cur = getById(state.selected);
-  if (!isDeepLinked && cur && cur.symbol === p.symbol && !cur.isReal) state.selected = p.id;
+  // Select the new post only when nothing is shown yet (e.g. the first post to
+  // arrive on an empty feed). Otherwise never steal the view from the post the
+  // user is reading — the row still lands at the top of the list, just unselected.
+  if (!getById(state.selected)) state.selected = p.id;
   renderList();
   if (state.selected === p.id) renderDetail();
   showToast(p);
@@ -1618,33 +1496,25 @@ function handleInsert(post) {
   setTimeout(() => { p.isNew = false; }, 3000);
 }
 
-function handleConfirm(id) {
-  const p = getById(id);
-  if (!p || p.confirmed) return;
-  p.confirmed = true;
-  p.confirmedAt = new Date().toISOString();
-  renderList();
-  const row = document.getElementById('row-' + id);
-  if (row) { row.classList.add('confirm-glow'); setTimeout(() => row.classList.remove('confirm-glow'), 1700); }
-  if (state.selected === id) renderDetail();
-}
-
-/* Backend wiring stub (Phase 3). Kept inert here — preview uses the demo
-   simulator below. analysis_posts lives in the aurum-customers project.
-   Phase 4c note: when this is wired, handleInsert already refuses to auto-follow
-   while isDeepLinked, so a live INSERT cannot move the chart off a pinned post;
-   handleConfirm only repaints the already-selected post, so it is safe too. */
+/* Phase 4b — live INSERTs. New analysis_posts rows are mapped and prepended so
+   the feed updates without a reload. Paired with subscribeChartImages (UPDATE)
+   below; together they keep the feed current. */
+let insertChannel = null;
 function subscribeRealtime(client) {
-  // client.channel('analysis_posts')
-  //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'analysis_posts' }, ({ new: row }) => handleInsert(mapRow(row)))
-  //   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'analysis_posts' }, ({ new: row }) => { if (row.confirmed) handleConfirm(row.id); })
-  //   .subscribe();
+  if (!client || !client.channel || insertChannel) return;
+  try {
+    insertChannel = client
+      .channel('analysis_posts_insert')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'analysis_posts' },
+        ({ new: row }) => { if (row && row.id && !getById(row.id)) handleInsert(mapRow(row)); })
+      .subscribe();
+  } catch (e) { /* realtime unavailable — new posts appear on next page load */ }
 }
 
 /* Phase 5b — live chart-image fills. Listens for UPDATE events on analysis_posts
    and flips the matching card's "ดูภาพ Chart" button on when chart_image_url
-   lands (NULL → URL). Scoped to the chart fields only so it does not disturb the
-   demo/preview flow above. */
+   lands (NULL → URL). Scoped to the chart fields only. */
 let chartImgChannel = null;
 function subscribeChartImages(client) {
   if (!client || !client.channel || chartImgChannel) return;
@@ -1659,36 +1529,6 @@ function subscribeChartImages(client) {
       .subscribe();
   } catch (e) { /* realtime unavailable — button still flips on next page load */ }
 }
-
-/* --- demo simulator (preview only) --- */
-const DEMO_POOL = [
-  { symbol:'XAUUSD', timeframe:'M15', view:'bullish', confidence:4, rewardRatio:1.8, keyLevel:4472.10, currentPrice:4472.05, riskLevel:4463.40,
-    targetZones:[{level:4480.00,hit:false},{level:4488.00,hit:false},{level:4496.00,hit:false}],
-    stats:[{label:'Z1',pct:68,count:344},{label:'Z2',pct:45,count:228},{label:'Z3',pct:31,count:158}],
-    market:{emoji:'🟢',th:'สงบ',en:'consolidation'}, volatility:4.97,
-    title:'ทองคำกลับตัวเหนือจุดสำคัญ มุมมองขาขึ้น',
-    note:'ราคากลับมายืนเหนือจุดสำคัญและเริ่มทำจุดสูงยกตัว มุมมองขาขึ้นระยะสั้นเข้าหาโซนเป้าหมายด้านบน' },
-  { symbol:'BTCUSD', timeframe:'M30', view:'bearish', confidence:3, rewardRatio:1.6, keyLevel:96850, currentPrice:96910, riskLevel:97600,
-    targetZones:[{level:96000,hit:false},{level:95200,hit:false},{level:94400,hit:false}],
-    stats:[{label:'Z1',pct:57,count:266},{label:'Z2',pct:38,count:171},{label:'Z3',pct:25,count:112}],
-    market:{emoji:'🟡',th:'ผันผวนปานกลาง',en:'ranging'}, volatility:7.18,
-    title:'บิตคอยน์ย่อจากแนวต้าน M30 มุมมองขาลง',
-    note:'ราคาย่อจากแนวต้านบริเวณจุดสำคัญ มุมมองขาลงระยะสั้นเข้าหาโซนเป้าหมายด้านล่าง' },
-];
-let demoIdx = 0;
-function simulateIncoming() {
-  // Phase 4c — sticky deep link: no demo/auto inserts may touch a deep-linked
-  // view. Gating here covers BOTH the boot auto-demo timer and the manual
-  // จำลอง button, so the linked live post can never be hijacked by a mock post.
-  if (isDeepLinked) return;
-  const base = DEMO_POOL[demoIdx % DEMO_POOL.length];
-  demoIdx++;
-  const id = 'an-' + (++incomingSeq);
-  handleInsert({ ...base, id, minsAgo: 0, timeAgo: 'เมื่อสักครู่', confirmed: false });
-  // bar closes a few seconds later → non-repaint confirmation
-  setTimeout(() => handleConfirm(id), 4500);
-}
-document.getElementById('simulate-btn').addEventListener('click', simulateIncoming);
 
 /* ---------- filters ---------- */
 document.getElementById('f-symbol').addEventListener('change', e => { state.symbol = e.target.value; renderList(); renderDetail(); });
@@ -1755,8 +1595,11 @@ function mapRow(row) {
   const stars = Math.max(1, Math.min(5, Math.round(conf100 / 20) || 1));
   const tz = Array.isArray(row.target_zones) ? row.target_zones : [];
   const biasWord = row.bias === 'bullish' ? 'ขาขึ้น' : 'ขาลง';
-  const minsAgo = row.timestamp_utc
-    ? Math.max(0, Math.round((Date.now() - new Date(row.timestamp_utc).getTime()) / 60000))
+  // Age is computed from created_at (the row's real insertion time). timestamp_utc
+  // is a Pine V.2 payload field (often the bar time) and is NOT used for age.
+  const createdAt = row.created_at || null;
+  const minsAgo = createdAt
+    ? Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 60000))
     : 0;
   const keyLevel = typeof row.key_level === 'number' ? row.key_level : (last ? +last.close : 0);
   const riskNum = typeof row.invalidation_price === 'number' ? row.invalidation_price : keyLevel;
@@ -1769,7 +1612,8 @@ function mapRow(row) {
   }
   return {
     id: row.id, symbol: row.symbol, timeframe: row.timeframe,
-    minsAgo,
+    minsAgo, createdAt,
+    timeAgo: formatAge(createdAt),
     view: row.bias === 'bullish' ? 'bullish' : 'bearish',
     confidence: stars,
     rewardRatio: row.rr_ratio != null ? row.rr_ratio : '—',
@@ -1804,22 +1648,20 @@ function runDeepLink() { if (typeof applyDeepLink === 'function') applyDeepLink(
 async function loadRealFeed() {
   const client = getFeedClient();
   if (!client) { runDeepLink(); return; }
-  subscribeChartImages(client);
+  subscribeRealtime(client);     // Phase 4b — live INSERTs
+  subscribeChartImages(client);  // Phase 5b — live chart_image_url fills
   try {
     const { data, error } = await client
       .from('analysis_posts')
       .select('*')
-      .order('timestamp_utc', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(50);
-    if (error || !Array.isArray(data) || !data.length) { runDeepLink(); return; }
-    const mapped = data.map(mapRow);
-    const realIds = new Set(mapped.map(p => p.id));
-    // Prepend real rows; keep demo samples (no id overlap) as fallback content.
-    POSTS = mapped.concat(POSTS.filter(p => !realIds.has(p.id)));
-    if (!getById(state.selected)) state.selected = POSTS[0].id;
+    if (error || !Array.isArray(data)) { runDeepLink(); return; }
+    POSTS = data.map(mapRow);
+    if (!getById(state.selected)) state.selected = POSTS.length ? POSTS[0].id : null;
     renderList();
     renderDetail();
-  } catch (e) { /* network/transient — fall back to demo samples already rendered */ }
+  } catch (e) { /* network/transient — the empty state stays until the next load */ }
   runDeepLink();
 }
 
@@ -1836,7 +1678,13 @@ function applyDeepLink() {
   try { pid = new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
   if (!pid) { deepLinkDone = true; return; }
   const target = getById(pid);
-  if (!target) return; // not loaded — nothing to scroll to
+  if (!target) {
+    // Target row isn't in the feed (e.g. older than the 50-row window). Show the
+    // visible posts normally; surface a non-user-facing hint for debugging.
+    console.warn('Deep link target not in feed: ' + pid);
+    deepLinkDone = true;
+    return;
+  }
 
   deepLinkDone = true;
   // Clear filters that could hide the target row.
@@ -1866,19 +1714,10 @@ function applyDeepLink() {
 }
 
 /* ---------- boot ---------- */
-renderList();
+renderList();      // renders the empty state until loadRealFeed resolves
 renderDetail();
 maybeRequestNotify();
-loadRealFeed();
-// Demo (preview only): confirm the first pending post, then show one incoming
-// alert. Skipped in deep-link sticky mode (isDeepLinked) so the linked live post
-// is not disturbed and the smoke test stays clean. The manual จำลอง button is
-// also gated inside simulateIncoming, so with no ?post_id the full demo flow
-// (this confirm + insert + the button) is 100% unchanged.
-if (!isDeepLinked) {
-  setTimeout(() => handleConfirm('an-001'), 5000);
-  setTimeout(simulateIncoming, 9000);
-}
+loadRealFeed();    // real analysis_posts only — no demo/simulated content
 </script>
 
 </body>
