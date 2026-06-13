@@ -223,6 +223,39 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   .chart-modal-img { max-width: calc(100vw - 16px); }
   .chart-modal-caption { font-size: 14px; bottom: 12px; }
 }
+
+/* =====================================================================
+   Phase 7 — inline chart-img.com PNG inside the post detail panel.
+   Replaces the Lightweight Charts container: the real TradingView shared
+   layout (uoSX32t7) shows immediately, full-width; clicking it opens the
+   Phase 5b full-screen modal. ===================================================================== */
+.chart-inline-img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid #2c1a4a;
+  background: #0a0420;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.chart-inline-img:hover { border-color: #8b7029; box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.25); }
+.chart-inline-hint {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  pointer-events: none;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(10, 4, 32, 0.8);
+  border: 1px solid #8b7029;
+  color: #e7c66e;
+}
 </style>
 </head>
 
@@ -560,10 +593,8 @@ function getById(id) { return POSTS.find(p => p.id === id); }
 const state = { symbol: 'all', sort: 'new', conf: 0, selected: null };
 
 /* Deep link: when opened from Telegram with ?post_id=..., applyDeepLink() pins
-   the chart + detail to that authoritative analysis_posts row and auto-opens the
-   chart-image modal. deepLinkPid also tags the scrolled row with a 📸 cue. */
-let deepLinkPid = null;
-try { deepLinkPid = new URLSearchParams(location.search).get('post_id'); } catch (e) { /* ignore */ }
+   the detail to that authoritative analysis_posts row and auto-opens the
+   chart-image modal. The id is read inside applyDeepLink() at mount time. */
 
 /* ---------- formatting helpers ---------- */
 function fmtLevel(symbol, n) {
@@ -637,7 +668,6 @@ function renderList() {
         <span class="font-mono text-sm font-semibold text-warm flex items-center gap-1.5">${p.symbol}
           <span class="text-[10px] text-t3 font-sans">${p.timeframe}</span>
           ${p.unread ? '<span class="text-[9px] bg-gold text-bg font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>' : ''}
-          ${(deepLinkPid && p.id === deepLinkPid && hasChartImage(p)) ? '<span title="มีภาพ chart" class="text-[11px]">📸</span>' : ''}
         </span>
         <span class="text-[10px] text-t3 font-mono">${ageLabel(p)}</span>
       </div>
@@ -806,67 +836,38 @@ function makeSDZonesPrimitive() {
   };
 }
 
+/* Phase 7 — the detail shell now shows the chart-img.com PNG inline (the real
+   TradingView shared layout, indicators baked in) instead of the Lightweight
+   Charts canvas. The image fills the container and opens the Phase 5b modal on
+   click. The Lightweight Charts builders/updaters below are kept as dead code
+   for possible future use, but are no longer invoked. */
 function buildDetailShell() {
   detailEl.innerHTML = `
     <div class="fade-in">
       <div id="d-top"></div>
       <div class="mb-4">
-        <div class="flex items-center justify-between gap-2 mb-2">
-          <span class="text-[11px] text-t3 uppercase tracking-widest">กราฟราคา · M15</span>
-          <div class="hidden sm:flex items-center gap-1 flex-wrap justify-end">
-            <button id="ema-toggle" class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md border transition"></button>
-            <span id="smma-toggle-bar" class="inline-flex items-center gap-1"></span>
-            <span id="pattern-toggle-bar" class="inline-flex items-center gap-1"></span>
-          </div>
-        </div>
         <div class="relative">
-          <div id="chart-container" class="w-full h-[320px] sm:h-[480px] rounded-xl overflow-hidden border border-line"></div>
-          <!-- Empty state when a บทวิเคราะห์ carries no candle data (Phase 4b Task 1.1). -->
+          <!-- Inline chart-img.com PNG (TradingView shared layout uoSX32t7).
+               Shown immediately when the post carries chart_image_url; click
+               opens the Phase 5b full-screen modal. -->
+          <img id="inline-chart-img" class="chart-inline-img hidden" alt="ภาพ chart การวิเคราะห์" />
+          <!-- Fallback: visible posts always carry an image (filtered in the
+               feed query), so this only shows in the rare null case. -->
           <div id="chart-empty" class="hidden w-full h-[320px] sm:h-[480px] rounded-xl border border-line items-center justify-center text-sm text-t3">รอข้อมูลแท่งเทียน</div>
-          <!-- F11 — Bull UP / Bear Down trend label (DOM badge, top-right of the chart) -->
-          <div id="trend-label" class="absolute top-2 right-2 z-10 pointer-events-none"></div>
+          <span id="inline-chart-hint" class="chart-inline-hint hidden">🔍 คลิกเพื่อขยาย</span>
         </div>
-        <p class="text-[10px] text-t3 mt-1 text-right">กราฟโดย TradingView Lightweight Charts</p>
+        <p class="text-[10px] text-t3 mt-1 text-right">ภาพจาก TradingView</p>
       </div>
       <div id="d-bottom"></div>
     </div>`;
-  const container = document.getElementById('chart-container');
-  chart = LightweightCharts.createChart(container, chartOptions());
-  candleSeries = chart.addCandlestickSeries({
-    upColor: '#22c55e', downColor: '#ef4444',
-    borderUpColor: '#22c55e', borderDownColor: '#ef4444',
-    wickUpColor: '#22c55e', wickDownColor: '#ef4444',
-  });
-  ema9Series = chart.addLineSeries({ color: '#a78bfa', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, title: 'EMA9' });
-
-  // Supply/Demand zone overlay (Task 1.2) — drawn under the candles, fed per
-  // selection in updateChart(). attachPrimitive is available in LWC v4.2.
-  if (typeof candleSeries.attachPrimitive === 'function') {
-    sdZonesPrimitive = makeSDZonesPrimitive();
-    candleSeries.attachPrimitive(sdZonesPrimitive);
-  }
-
-  // SMMA 21/50/100/200 — one LineSeries each (mirrors ema9Series). Drawn above
-  // candles in definition order; data is set per selection in updateChart().
-  SMMA_DEFS.forEach(d => {
-    smmaSeries[d.period] = chart.addLineSeries({
-      color: d.color, lineWidth: 2,
-      priceLineVisible: false, lastValueVisible: false, title: d.label,
-    });
-  });
   shellBuilt = true;
 
-  const emaBtn = document.getElementById('ema-toggle');
-  refreshEmaBtn(emaBtn);
-  emaBtn.addEventListener('click', () => {
-    emaOn = !emaOn;
-    localStorage.setItem('aurum-ema', emaOn ? 'on' : 'off');
-    refreshEmaBtn(emaBtn);
-    ema9Series.applyOptions({ visible: emaOn });
+  // Click the inline image → open the full-screen modal for the selected post.
+  const img = document.getElementById('inline-chart-img');
+  if (img) img.addEventListener('click', () => {
+    const p = getById(state.selected);
+    if (p) openChartModal(p);
   });
-  buildSmmaToggles();
-  buildPatternToggles();
-  window.addEventListener('resize', () => { if (chart) chart.timeScale().fitContent(); });
 }
 
 /* SMMA toggle chips (desktop control bar). Each flips one MA's visibility and
@@ -1211,8 +1212,6 @@ function bottomHtml(p) {
           <span class="text-warmDim">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(p.confidence)}</span></span>
         </div>
 
-        <div id="chart-btn-wrap-${p.id}">${chartBtnHtml(p)}</div>
-
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div class="bg-goldBg border border-goldDim rounded-xl p-3">
             <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">จุดสำคัญ</p>
@@ -1260,36 +1259,12 @@ function bindCollapse(p) {
 }
 
 /* =====================================================================
-   Phase 5b — chart image modal. The post card shows a button that opens a
-   full-screen overlay with analysis_posts.chart_image_url. While the URL is
-   still NULL (image being generated by the backend) the button is disabled;
-   a realtime UPDATE flips it to enabled without a page reload.
+   Phase 5b/7 — chart image modal. The inline chart-img.com PNG (Phase 7) opens
+   this full-screen overlay with analysis_posts.chart_image_url on click. Posts
+   without a chart_image_url are filtered out of the feed entirely (Phase 7), so
+   the modal is only ever opened for a populated URL.
    ===================================================================== */
 function hasChartImage(p) { return !!(p && p.chartImageUrl && String(p.chartImageUrl).trim()); }
-
-function chartBtnHtml(p) {
-  if (hasChartImage(p)) {
-    return `<button type="button" data-chart-open="${p.id}"
-      class="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-lg border border-goldDim bg-goldBg text-gold hover:bg-gold hover:text-bg transition cursor-pointer">📸 ดูภาพ Chart</button>`;
-  }
-  return `<button type="button" disabled title="ภาพ chart กำลังถูกสร้าง รอประมาณ 30 วินาที"
-    class="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-lg border border-line bg-surface2 text-t3 opacity-70 cursor-not-allowed">⏳ กำลังโหลดภาพ...</button>`;
-}
-
-function bindChartBtn(p) {
-  const wrap = document.getElementById('chart-btn-wrap-' + p.id);
-  if (!wrap) return;
-  const btn = wrap.querySelector('button[data-chart-open]');
-  if (btn) btn.addEventListener('click', () => openChartModal(p));
-}
-
-/* Re-render only the affected card's button (no chart re-create → no flicker). */
-function refreshChartBtn(p) {
-  const wrap = document.getElementById('chart-btn-wrap-' + p.id);
-  if (!wrap) return;
-  wrap.innerHTML = chartBtnHtml(p);
-  bindChartBtn(p);
-}
 
 /* Format an ISO timestamp as Bangkok (Asia/Bangkok) local time for the caption. */
 function fmtBangkok(iso) {
@@ -1371,15 +1346,46 @@ function closeChartModal() {
   window.addEventListener('popstate', () => { if (chartModalOpen) finalizeChartClose(); });
 })();
 
-/* Realtime UPDATE on analysis_posts: when chart_image_url fills in (NULL → URL),
-   flip the affected card's button from disabled → enabled with no page reload. */
-function handleChartImageUpdate(id, url, generatedAt) {
-  const p = getById(id);
-  if (!p) return;
-  p.chartImageUrl = url || null;
-  if (generatedAt) p.chartImageGeneratedAt = generatedAt;
-  if (!hasChartImage(p)) return;
-  if (state.selected === id) refreshChartBtn(p);
+/* Realtime UPDATE on analysis_posts (Phase 7). The Pine V.2 flow inserts a row
+   with no chart_image_url (filtered out of the feed), then ~24s later UPDATEs it
+   with the generated image. This handler is what makes such a row appear:
+     - already in the feed → refresh its inline image (and modal source);
+     - not in the feed yet, image just landed (NULL → URL) → add it to the top,
+       exactly like a fresh arrival (handleInsert).
+   Rows that update without an image are ignored (they stay filtered out). */
+function handleChartImageUpdate(row) {
+  if (!row || !row.id) return;
+  const existing = getById(row.id);
+  if (existing) {
+    existing.chartImageUrl = row.chart_image_url || null;
+    if (row.chart_image_generated_at) existing.chartImageGeneratedAt = row.chart_image_generated_at;
+    if (state.selected === row.id) renderInlineChart(existing);
+    return;
+  }
+  // New chart_image_url on a row we had filtered out at INSERT → surface it now.
+  if (row.chart_image_url) handleInsert(mapRow(row));
+}
+
+/* Phase 7 — paint the inline chart-img.com PNG for the selected post. The PNG
+   already bakes in every indicator from the TradingView shared layout, so there
+   is no candle/overlay computation here. Posts without an image are filtered out
+   of the feed, but the empty fallback is kept for safety. */
+function renderInlineChart(p) {
+  const img   = document.getElementById('inline-chart-img');
+  const empty = document.getElementById('chart-empty');
+  const hint  = document.getElementById('inline-chart-hint');
+  if (!img) return;
+  if (hasChartImage(p)) {
+    if (img.getAttribute('src') !== p.chartImageUrl) img.src = p.chartImageUrl;
+    img.classList.remove('hidden');
+    if (hint) hint.classList.remove('hidden');
+    if (empty) { empty.classList.add('hidden'); empty.classList.remove('flex'); }
+  } else {
+    img.classList.add('hidden');
+    img.removeAttribute('src');
+    if (hint) hint.classList.add('hidden');
+    if (empty) { empty.classList.remove('hidden'); empty.classList.add('flex'); }
+  }
 }
 
 function renderDetail() {
@@ -1389,8 +1395,7 @@ function renderDetail() {
   document.getElementById('d-top').innerHTML = topHtml(p);
   document.getElementById('d-bottom').innerHTML = bottomHtml(p);
   bindCollapse(p);
-  bindChartBtn(p);
-  updateChart(p);
+  renderInlineChart(p);
 }
 
 /* =====================================================================
@@ -1507,14 +1512,20 @@ function subscribeRealtime(client) {
       .channel('analysis_posts_insert')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'analysis_posts' },
-        ({ new: row }) => { if (row && row.id && !getById(row.id)) handleInsert(mapRow(row)); })
+        ({ new: row }) => {
+          // Phase 7 — a fresh INSERT usually has no chart_image_url yet (the
+          // backend fills it ~24s later via UPDATE). Don't show it until it has
+          // an image; subscribeChartImages picks it up on that UPDATE.
+          if (row && row.id && row.chart_image_url && !getById(row.id)) handleInsert(mapRow(row));
+        })
       .subscribe();
   } catch (e) { /* realtime unavailable — new posts appear on next page load */ }
 }
 
-/* Phase 5b — live chart-image fills. Listens for UPDATE events on analysis_posts
-   and flips the matching card's "ดูภาพ Chart" button on when chart_image_url
-   lands (NULL → URL). Scoped to the chart fields only. */
+/* Phase 5b/7 — live chart-image fills. Listens for UPDATE events on
+   analysis_posts; when chart_image_url lands (NULL → URL) the row is either
+   refreshed in place or added to the feed (handleChartImageUpdate). The full
+   row is passed through so a previously-filtered post can be mapped + shown. */
 let chartImgChannel = null;
 function subscribeChartImages(client) {
   if (!client || !client.channel || chartImgChannel) return;
@@ -1523,11 +1534,9 @@ function subscribeChartImages(client) {
       .channel('analysis_posts_chart_img')
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'analysis_posts' },
-        ({ new: row }) => {
-          if (row && row.id) handleChartImageUpdate(row.id, row.chart_image_url, row.chart_image_generated_at);
-        })
+        ({ new: row }) => { if (row && row.id) handleChartImageUpdate(row); })
       .subscribe();
-  } catch (e) { /* realtime unavailable — button still flips on next page load */ }
+  } catch (e) { /* realtime unavailable — posts appear on next page load */ }
 }
 
 /* ---------- filters ---------- */
@@ -1654,6 +1663,9 @@ async function loadRealFeed() {
     const { data, error } = await client
       .from('analysis_posts')
       .select('*')
+      // Phase 7 — only posts with a generated chart image are shown. Old test
+      // webhooks (pre-chart-pipeline) never got an image and are filtered out.
+      .not('chart_image_url', 'is', null)
       .order('created_at', { ascending: false })
       .limit(50);
     if (error || !Array.isArray(data)) { runDeepLink(); return; }

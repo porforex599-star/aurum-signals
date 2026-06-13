@@ -27,6 +27,24 @@ npx serve .
 > preview will show the **login overlay**; passing the gate requires a real
 > aurum-crm session with an active `aurum_analysis` subscription.
 
+## Tests
+
+The app ships as static HTML (no build step). A small test harness lives under
+`test/` and runs on Node:
+
+```bash
+npm install        # installs jsdom (only used by the room harness)
+npm test           # pattern-markers unit tests + the room.html jsdom harness
+```
+
+- `test/pattern-markers.test.js` — pure unit tests for the Gold Panel pattern
+  detection (no dependencies).
+- `test/room-phase7.test.js` — loads `room.html` in jsdom with Supabase/auth
+  stubbed and asserts the Phase 7 contract (no-chart posts filtered out, inline
+  chart image, click-to-open modal, realtime UPDATE adds a post, empty state).
+
+`scripts/check-banned-vocab.sh` guards the user-facing vocabulary.
+
 ## Deploy to Vercel
 
 1. Push this repo to GitHub
