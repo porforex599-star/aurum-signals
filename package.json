@@ -1,0 +1,14 @@
+{
+  "name": "aurum-signals",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Aurum Analysis — static frontend (no build step). package.json exists only to run the test harnesses.",
+  "scripts": {
+    "test": "node test/pattern-markers.test.js && node test/room-phase7.test.js",
+    "test:patterns": "node test/pattern-markers.test.js",
+    "test:room": "node test/room-phase7.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
