@@ -256,6 +256,129 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   border: 1px solid #8b7029;
   color: #e7c66e;
 }
+
+/* =====================================================================
+   Phase C Step 3 — TradingView username welcome popup + grant banner.
+   Dark/gold AURUM aesthetic. The popup is forced (no dismiss) while a
+   subscription is awaiting_username; the banner reflects the grant state
+   after the popup closes. ===================================================================== */
+#tv-popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.7);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+#tv-popup.open { display: flex; }
+.tv-card {
+  width: 100%;
+  max-width: 440px;
+  background: linear-gradient(180deg, #160a2e, #10061f);
+  border: 1px solid #8b7029;
+  border-radius: 20px;
+  padding: 30px 26px 26px;
+  text-align: center;
+  box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.8), 0 0 40px -8px rgba(212, 175, 55, 0.25);
+  animation: fadeIn 0.35s ease-out;
+}
+.tv-emoji { font-size: 34px; line-height: 1; margin-bottom: 12px; }
+.tv-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0 0 14px;
+  background: linear-gradient(135deg, #f5cd52, #d4af37);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.tv-lead { font-size: 13.5px; color: #c9b896; line-height: 1.65; margin: 0 0 16px; }
+.tv-hint {
+  display: flex;
+  gap: 8px;
+  text-align: left;
+  font-size: 12px;
+  color: #a99fc4;
+  line-height: 1.6;
+  background: rgba(36, 26, 13, 0.5);
+  border: 1px solid #2c1a4a;
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 18px;
+}
+.tv-hint svg { flex-shrink: 0; width: 16px; height: 16px; color: #e7c66e; margin-top: 1px; }
+.tv-input-wrap { position: relative; margin-bottom: 8px; }
+#tv-username {
+  width: 100%;
+  box-sizing: border-box;
+  background: #1e0f3a;
+  border: 1.5px solid #2c1a4a;
+  border-radius: 12px;
+  padding: 13px 15px;
+  color: #f5e8c7;
+  font-size: 15px;
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#tv-username::placeholder { color: #7a6f99; }
+#tv-username:focus { border-color: #8b7029; }
+#tv-username.valid { border-color: #22c55e; box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35); }
+#tv-username.invalid { border-color: #f23645; box-shadow: 0 0 0 1px rgba(242, 54, 69, 0.3); }
+.tv-feedback { min-height: 20px; font-size: 12px; line-height: 1.5; margin: 0 0 14px; text-align: left; padding-left: 2px; }
+.tv-feedback.ok { color: #22c55e; }
+.tv-feedback.bad { color: #f23645; }
+.tv-feedback.neutral { color: #7a6f99; }
+.tv-error { color: #f23645; font-size: 12.5px; line-height: 1.5; min-height: 16px; margin: 0 0 12px; text-align: left; }
+#tv-submit {
+  display: block;
+  width: 100%;
+  background: linear-gradient(135deg, #f5cd52, #d4af37);
+  color: #0a0420;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s, opacity 0.15s;
+}
+#tv-submit:hover:not(:disabled) { box-shadow: 0 0 26px rgba(212, 175, 55, 0.5); transform: translateY(-1px); }
+#tv-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Grant-state banner strip (below the top bar). */
+#tv-banner { display: none; }
+#tv-banner.show { display: block; }
+.tv-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 16px;
+  border-bottom: 1px solid #2c1a4a;
+}
+.tv-banner-inner .tv-banner-dot { flex-shrink: 0; font-size: 14px; }
+.tv-banner-inner .tv-banner-text { flex: 1; min-width: 0; }
+.tv-banner-inner a { color: #e7c66e; text-decoration: underline; white-space: nowrap; }
+.tv-banner-pending { background: rgba(245, 196, 81, 0.10); color: #f5cd52; }
+.tv-banner-active  { background: rgba(34, 197, 94, 0.10); color: #7ee2a8; }
+.tv-banner-failed  { background: rgba(242, 54, 69, 0.10); color: #f7a4ac; }
+.tv-banner-expired { background: rgba(242, 54, 69, 0.10); color: #f7a4ac; }
+.tv-spinner-sm {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(245, 196, 81, 0.3);
+  border-top-color: #f5cd52;
+  border-radius: 50%;
+  animation: chartSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
 </style>
 </head>
 
@@ -335,6 +458,9 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
       reveal();
       window.__AURUM_GATE_PASSED = true;
       setInterval(recheck, 5 * 60 * 1000);
+      // Phase C Step 3 — kick off the Aurum Gold TV-grant flow (welcome
+      // popup + state banner). It manages its own auth via this client.
+      if (window.AurumGoldTV) window.AurumGoldTV.init(sb);
     } catch (e) {
       showError('ไม่สามารถตรวจสอบสิทธิ์การใช้งานได้ กรุณาลองใหม่อีกครั้ง');
     }
@@ -502,6 +628,9 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     </div>
   </header>
 
+  <!-- Phase C Step 3 — Aurum Gold grant-state banner (populated by the TV module) -->
+  <div id="tv-banner" class="flex-shrink-0" role="status" aria-live="polite"></div>
+
   <!-- Mobile tabs -->
   <div class="md:hidden flex-shrink-0 flex border-b border-line bg-bg/60">
     <button id="tab-list" class="flex-1 py-2.5 text-sm font-medium text-gold border-b-2 border-gold relative">
@@ -553,6 +682,34 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
 <!-- Toast container -->
 <div id="toast-wrap" aria-live="polite"></div>
+
+<!-- =====================================================================
+     Phase C Step 3 — TradingView username welcome popup.
+     Forced modal: shown while a subscription is awaiting_username (or on
+     ?welcome=1). No overlay-click / Esc dismissal — only a successful or
+     409 (already-submitted) response closes it. Logic in the TV module.
+     ===================================================================== -->
+<div id="tv-popup" role="dialog" aria-modal="true" aria-labelledby="tv-title">
+  <div class="tv-card">
+    <div class="tv-emoji">🎉</div>
+    <h2 id="tv-title" class="tv-title">ยินดีต้อนรับสู่ Aurum Analysis!</h2>
+    <p class="tv-lead">
+      กรุณากรอก TradingView Username ของคุณ<br>
+      เพื่อรับสิทธิ์ Aurum Gold Indicator
+    </p>
+    <div class="tv-hint">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span>Username ของคุณดูได้จาก TradingView Profile<br>ไม่ต้องใส่ @ (ระบบจะลบให้อัตโนมัติ)</span>
+    </div>
+    <div class="tv-input-wrap">
+      <input id="tv-username" type="text" inputmode="latin" autocomplete="off" autocapitalize="none"
+             spellcheck="false" maxlength="40" placeholder="AurumTrader1" aria-describedby="tv-feedback" />
+    </div>
+    <p id="tv-feedback" class="tv-feedback neutral" aria-live="polite">ใช้ตัวอักษร a-z, 0-9, _ เท่านั้น (3-25 ตัว)</p>
+    <p id="tv-error" class="tv-error" role="alert"></p>
+    <button id="tv-submit" type="button" disabled>ยืนยัน</button>
+  </div>
+</div>
 
 <!-- Phase 5b — full-screen chart image modal (opened from the post card button) -->
 <div id="chart-modal" role="dialog" aria-modal="true" aria-label="ภาพ Chart">
@@ -1730,6 +1887,291 @@ renderList();      // renders the empty state until loadRealFeed resolves
 renderDetail();
 maybeRequestNotify();
 loadRealFeed();    // real analysis_posts only — no demo/simulated content
+</script>
+
+<!-- =====================================================================
+     Phase C Step 3 — Aurum Gold TradingView-grant module.
+
+     Runs after the access gate reveals the room (gate calls
+     AurumGoldTV.init(sbClient)). Responsibilities:
+       • Query the customer's Aurum Analysis subscription state via the
+         aurum-gold-get-my-subscription-state edge function (Option B —
+         aurum-customers PostgREST can't accept the aurum-crm JWT directly).
+       • Force the welcome popup while tv_grant_status === 'awaiting_username'
+         (or on ?welcome=1), capture + validate the TradingView username,
+         and POST it to aurum-gold-submit-tv-username.
+       • Render the grant-state banner (pending_bot / active / bot_failed /
+         expired) once the popup closes, polling every 30s so it updates
+         when the Playwright bot completes or fails.
+
+     Auth reuses the aurum-crm session owned by the gate's Supabase client.
+     ===================================================================== -->
+<script>
+window.AurumGoldTV = (function () {
+  const SUBMIT_URL  = 'https://etwlurpjrqlvrxgsbhkd.supabase.co/functions/v1/aurum-gold-submit-tv-username';
+  const STATE_URL   = 'https://etwlurpjrqlvrxgsbhkd.supabase.co/functions/v1/aurum-gold-get-my-subscription-state';
+  const PACKAGE_URL = 'https://aurumlive.com/package';
+  // Client-side mirror of the server's rule (3-25 chars, [A-Za-z0-9_]).
+  const TV_RE  = /^[A-Za-z0-9_]{3,25}$/;
+  const POLL_MS = 30000;
+
+  let sbClient    = null;
+  let currentSubId = null;   // subscription_id we'd submit a username for
+  let submitting   = false;
+  let validationWired = false;
+  let pollTimer    = null;
+  let booted       = false;
+
+  // ---- DOM ----
+  const $ = (id) => document.getElementById(id);
+  const popup    = () => $('tv-popup');
+  const input    = () => $('tv-username');
+  const submitBtn = () => $('tv-submit');
+  const feedback = () => $('tv-feedback');
+  const errorBox = () => $('tv-error');
+  const banner   = () => $('tv-banner');
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ---- Auth (fresh token from the gate's client each call) ----
+  async function getToken() {
+    try {
+      const { data: { session } } = await sbClient.auth.getSession();
+      return session ? session.access_token : null;
+    } catch (_) { return null; }
+  }
+
+  // ---- State query (Option B edge function) ----
+  async function fetchState() {
+    const token = await getToken();
+    if (!token) return null;
+    try {
+      const res = await fetch(STATE_URL, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      if (!res.ok) return null;
+      const body = await res.json().catch(() => null);
+      return body && Array.isArray(body.subscriptions) ? body.subscriptions : [];
+    } catch (_) { return null; }
+  }
+
+  // ---- Popup ----
+  function isOpen() { return popup().classList.contains('open'); }
+
+  function openPopup() {
+    const p = popup();
+    if (p.classList.contains('open')) return;   // idempotent — don't reset input
+    p.classList.add('open');
+    wireValidation();
+    // Defer focus so the modal is painted first (and not stolen by polls).
+    setTimeout(() => { try { input().focus(); } catch (_) {} }, 50);
+  }
+
+  function closePopup() {
+    popup().classList.remove('open');
+  }
+
+  function setFeedback(kind, msg) {
+    const f = feedback();
+    f.className = 'tv-feedback ' + kind;
+    f.textContent = msg;
+  }
+
+  function showError(msg) { errorBox().textContent = msg || ''; }
+
+  // Strip a leading '@' (server does too) and validate live.
+  function currentUsername() {
+    return input().value.replace(/^@+/, '');
+  }
+
+  function validate() {
+    const el = input();
+    const stripped = el.value.replace(/^@+/, '');
+    if (stripped !== el.value) el.value = stripped;   // live-strip the '@'
+    const v = stripped;
+    showError('');
+    if (v.length === 0) {
+      setFeedback('neutral', 'ใช้ตัวอักษร a-z, 0-9, _ เท่านั้น (3-25 ตัว)');
+      el.classList.remove('valid', 'invalid');
+      submitBtn().disabled = true;
+      return false;
+    }
+    if (TV_RE.test(v)) {
+      setFeedback('ok', '✓ Username ถูกต้อง');
+      el.classList.add('valid'); el.classList.remove('invalid');
+      submitBtn().disabled = submitting || !currentSubId;
+      return true;
+    }
+    setFeedback('bad', '✗ ใช้ตัวอักษร a-z, 0-9, _ เท่านั้น (3-25 ตัว)');
+    el.classList.add('invalid'); el.classList.remove('valid');
+    submitBtn().disabled = true;
+    return false;
+  }
+
+  function wireValidation() {
+    if (validationWired) return;
+    validationWired = true;
+    input().addEventListener('input', validate);
+    input().addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); if (!submitBtn().disabled) submit(); }
+    });
+    submitBtn().addEventListener('click', submit);
+  }
+
+  function defaultErrorFor(status) {
+    if (status === 400) return 'TradingView Username ไม่ถูกต้อง กรุณาตรวจสอบแล้วลองใหม่อีกครั้ง';
+    if (status === 403) return 'ไม่มีสิทธิ์ส่ง username สำหรับ subscription นี้';
+    return 'ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง';
+  }
+
+  // ---- Submit ----
+  async function submit() {
+    if (submitting) return;
+    if (!validate()) return;
+    if (!currentSubId) { showError('ไม่พบ subscription — กรุณารีเฟรชหน้านี้'); return; }
+
+    submitting = true;
+    const btn = submitBtn();
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+    showError('');
+
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('no_token');
+      const res = await fetch(SUBMIT_URL, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription_id: currentSubId, tradingview_username: currentUsername() }),
+      });
+
+      if (res.status === 200) {
+        closePopup();
+        toast('บันทึก username เรียบร้อย — กำลังเปิดสิทธิ์...');
+        await refresh();              // re-pull → pending_bot banner
+      } else if (res.status === 409) {
+        // Already submitted / wrong state — close and let the banner show.
+        closePopup();
+        await refresh();
+      } else {
+        // 400 / 403 / 500 — keep the popup open, surface the message, allow retry.
+        const body = await res.json().catch(() => ({}));
+        showError((body && body.message) ? body.message : defaultErrorFor(res.status));
+        btn.disabled = false;
+      }
+    } catch (_) {
+      showError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+      btn.disabled = false;
+    } finally {
+      submitting = false;
+      btn.textContent = orig;
+    }
+  }
+
+  // ---- Banner ----
+  function hideBanner() {
+    const b = banner();
+    b.classList.remove('show');
+    b.innerHTML = '';
+  }
+
+  function renderBanner(sub) {
+    if (!sub) { hideBanner(); return; }
+    const st = sub.tv_grant_status;
+    let cls, lead, spinner = false;
+
+    if (sub.status === 'expired' || st === 'expired') {
+      cls = 'tv-banner-expired';
+      lead = '<span class="tv-banner-dot">🔴</span><span class="tv-banner-text">Subscription หมดอายุแล้ว — ต่ออายุที่ <a href="' + PACKAGE_URL + '">aurumlive.com/package</a></span>';
+    } else if (st === 'pending_bot') {
+      cls = 'tv-banner-pending'; spinner = true;
+      lead = '<span class="tv-spinner-sm"></span><span class="tv-banner-text">กำลังเปิดสิทธิ์ Aurum Gold... กรุณารอ ~2 นาที คุณยังใช้ /room ได้ตามปกติ</span>';
+    } else if (st === 'active') {
+      cls = 'tv-banner-active';
+      const days = (sub.tv_days_remaining != null) ? sub.tv_days_remaining : null;
+      const left = (days != null) ? ' · เหลือ ' + days + ' วัน' : '';
+      lead = '<span class="tv-banner-dot">🟢</span><span class="tv-banner-text">Aurum Gold พร้อมใช้งาน — เปิด TradingView ได้เลย' + left + '</span>';
+    } else if (st === 'bot_failed') {
+      cls = 'tv-banner-failed';
+      lead = '<span class="tv-banner-dot">🔴</span><span class="tv-banner-text">พบปัญหาในการเปิดสิทธิ์ กรุณาทักมาที่ LINE@ AurumAnalysis</span>';
+    } else {
+      // awaiting_username is handled by the popup; null / unknown → no banner.
+      hideBanner();
+      return;
+    }
+
+    const b = banner();
+    b.innerHTML = '<div class="tv-banner-inner ' + cls + '">' + lead + '</div>';
+    b.classList.add('show');
+  }
+
+  // ---- Toast (lightweight; reuses the room's toast styles) ----
+  function toast(msg) {
+    const wrap = document.getElementById('toast-wrap');
+    if (!wrap) return;
+    const el = document.createElement('div');
+    el.className = 'toast bg-surface border border-goldDim rounded-xl p-3.5 flex gap-3 items-center';
+    el.innerHTML =
+      '<div class="w-9 h-9 rounded-lg bg-okBg border border-ok/40 flex items-center justify-center flex-shrink-0 text-ok">'
+        + '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+      + '</div>'
+      + '<p class="text-sm font-semibold text-warm min-w-0 flex-1">' + escapeHtml(msg) + '</p>';
+    wrap.appendChild(el);
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 5000);
+  }
+
+  // ---- Reconcile UI against the latest server state ----
+  async function refresh() {
+    const subs = await fetchState();
+    if (!subs) return;             // transient failure — keep current UI
+
+    const awaiting = subs.find((s) => s.tv_grant_status === 'awaiting_username');
+    const primary  = awaiting || subs[0] || null;
+
+    if (awaiting) {
+      // Username still needed → force the popup.
+      currentSubId = awaiting.subscription_id;
+      hideBanner();
+      openPopup();
+      if (!submitting) validate();   // refresh the submit-enabled state
+    } else {
+      // No longer awaiting → ensure the popup is closed and show the banner.
+      currentSubId = primary ? primary.subscription_id : null;
+      closePopup();
+      renderBanner(primary);
+    }
+  }
+
+  // ---- Entry point (called by the access gate after reveal) ----
+  function init(sb) {
+    if (booted) return;
+    booted = true;
+    sbClient = sb;
+
+    // ?welcome=1 → show the popup immediately, then verify against state.
+    let welcome = false;
+    try {
+      const params = new URLSearchParams(location.search);
+      welcome = params.get('welcome') === '1';
+      if (welcome) {
+        params.delete('welcome');
+        const qs = params.toString();
+        history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+      }
+    } catch (_) {}
+
+    if (welcome) openPopup();   // forced shell; submit stays disabled until state confirms
+
+    refresh();                  // reconciles (closes popup if not awaiting)
+    pollTimer = setInterval(refresh, POLL_MS);
+  }
+
+  return { init: init };
+})();
 </script>
 
 </body>
