@@ -10,7 +10,7 @@
  *
  *   1. awaiting_username → the welcome popup is forced open, the submit
  *      subscription_id is captured from state, no banner is shown.
- *   2. Client validation: '@AurumTrader1' strips the '@' and enables submit;
+ *   2. Client validation: '@JohnDoe123' strips the '@' and enables submit;
  *      'abc@' is invalid → submit disabled.
  *   3. Submit 200 → popup closes, success toast, and after the state re-pull
  *      the pending_bot banner appears.
@@ -164,11 +164,11 @@ const bannerShown = (d) => d.getElementById('tv-banner').classList.contains('sho
     });
 
     /* --- 2. client validation ------------------------------------------- */
-    await test("'@AurumTrader1' strips the @ and enables submit", () => {
+    await test("'@JohnDoe123' strips the @ and enables submit", () => {
       const input = document.getElementById('tv-username');
-      input.value = '@AurumTrader1';
+      input.value = '@JohnDoe123';
       input.dispatchEvent(new window.Event('input'));
-      assert.strictEqual(input.value, 'AurumTrader1', 'leading @ must be stripped live');
+      assert.strictEqual(input.value, 'JohnDoe123', 'leading @ must be stripped live');
       assert.strictEqual(document.getElementById('tv-submit').disabled, false, 'submit enabled for a valid name');
     });
     await test("'abc@' is invalid → submit disabled", () => {
@@ -181,14 +181,14 @@ const bannerShown = (d) => d.getElementById('tv-banner').classList.contains('sho
     /* --- 3. submit 200 → popup closes + pending_bot banner --------------- */
     await test('submit 200 closes the popup and queues a pending_bot banner', async () => {
       const input = document.getElementById('tv-username');
-      input.value = 'AurumTrader1';
+      input.value = 'JohnDoe123';
       input.dispatchEvent(new window.Event('input'));
       // The next state pull (post-submit refresh) reflects the bot enqueue.
       ctx.state = [sub({ tv_grant_status: 'pending_bot' })];
       document.getElementById('tv-submit').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 
       await waitFor(() => !isPopupOpen(document) && bannerShown(document));
-      assert.deepStrictEqual(ctx.submitBody, { subscription_id: 'sub-1', tradingview_username: 'AurumTrader1' });
+      assert.deepStrictEqual(ctx.submitBody, { subscription_id: 'sub-1', tradingview_username: 'JohnDoe123' });
       assert.ok(!isPopupOpen(document), 'popup closes on 200');
       const banner = document.getElementById('tv-banner');
       assert.ok(banner.querySelector('.tv-banner-pending'), 'pending_bot banner shown');
@@ -240,7 +240,7 @@ const bannerShown = (d) => d.getElementById('tv-banner').classList.contains('sho
 
     await test('submit 409 closes the popup (already submitted elsewhere)', async () => {
       const input = document.getElementById('tv-username');
-      input.value = 'AurumTrader1';
+      input.value = 'JohnDoe123';
       input.dispatchEvent(new window.Event('input'));
       ctx.state = [sub({ tv_grant_status: 'pending_bot' })];
       document.getElementById('tv-submit').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));

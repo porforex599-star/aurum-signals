@@ -703,7 +703,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     </div>
     <div class="tv-input-wrap">
       <input id="tv-username" type="text" inputmode="latin" autocomplete="off" autocapitalize="none"
-             spellcheck="false" maxlength="40" placeholder="AurumTrader1" aria-describedby="tv-feedback" />
+             spellcheck="false" maxlength="40" placeholder="JohnDoe123" aria-describedby="tv-feedback" />
     </div>
     <p id="tv-feedback" class="tv-feedback neutral" aria-live="polite">ใช้ตัวอักษร a-z, 0-9, _ เท่านั้น (3-25 ตัว)</p>
     <p id="tv-error" class="tv-error" role="alert"></p>
@@ -2146,7 +2146,7 @@ window.AurumGoldTV = (function () {
     }
   }
 
-  // ---- Entry point (called by the access gate after reveal) ----
+  // ---- Boot hook (called by the access gate after reveal) ----
   function init(sb) {
     if (booted) return;
     booted = true;
