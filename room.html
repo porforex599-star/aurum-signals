@@ -756,6 +756,151 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .room-panel-empty { text-align: center; padding: 22px 10px; }
 .room-panel-empty-icon { font-size: 30px; margin-bottom: 8px; }
 .room-panel-empty p { font-size: 14px; color: #c9b896; margin: 0; }
+
+/* =====================================================================
+   วิธีการใช้งาน + ข้อมูลการใช้งาน tab content (rtab-*). Self-contained
+   styling for the two content panels — does not touch the TradingView
+   Username panel, the welcome popup, or the tab-switching logic.
+   ===================================================================== */
+.rtab { font-size: 12.5px; color: #c9b896; line-height: 1.6; }
+.rtab strong { font-weight: 700; color: #d4af37; }
+.rtab p { margin: 0; }
+.rtab-p { margin: 0 0 8px; font-size: 12px; line-height: 1.6; color: #c9b896; }
+.rtab-section { margin-bottom: 18px; }
+.rtab-section:last-child { margin-bottom: 0; }
+.rtab-h { color: #d4af37; font-weight: 600; margin: 0 0 10px; }
+.rtab-h-lg { font-size: 14px; }
+.rtab-h-md { font-size: 13px; }
+
+/* Numbered steps */
+.rtab-step { margin-bottom: 16px; }
+.rtab-step:last-child { margin-bottom: 0; }
+.rtab-step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.rtab-badge {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #d4af37; color: #0a0e1a;
+  font-size: 13px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.rtab-step-title { color: #d4af37; font-size: 13px; font-weight: 600; margin: 0; }
+
+/* Left-border accent boxes */
+.rtab-accent { border-radius: 6px; padding: 10px 13px; font-size: 12px; line-height: 1.6; }
+.rtab-accent-gold { background: rgba(212, 175, 55, 0.06); border-left: 3px solid #d4af37; }
+.rtab-accent-red  { background: rgba(220, 80, 80, 0.06); border-left: 3px solid #e87a7a; }
+.rtab-accent-red strong { color: #e87a7a; }
+
+/* EMA two-column boxes */
+.rtab-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.rtab-ebox { border-radius: 6px; padding: 10px 12px; font-size: 11.5px; line-height: 1.55; color: #c9b896; }
+.rtab-ebox-red   { background: rgba(220, 80, 80, 0.08); border: 1px solid rgba(220, 80, 80, 0.3); }
+.rtab-ebox-green { background: rgba(80, 200, 120, 0.08); border: 1px solid rgba(80, 200, 120, 0.3); }
+.rtab-ebox-title { font-weight: 600; margin: 0 0 3px; }
+.rtab-ebox-red .rtab-ebox-title { color: #e87a7a; }
+.rtab-ebox-green .rtab-ebox-title { color: #6dd394; }
+
+/* Arrow-significance cards (Step 3) */
+.rtab-arrow { border-radius: 6px; padding: 11px 13px; margin-bottom: 8px; }
+.rtab-arrow:last-child { margin-bottom: 0; }
+.rtab-arrow-1 { background: rgba(150, 150, 150, 0.06); border: 1px solid #333; }
+.rtab-arrow-2 { background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.4); }
+.rtab-arrow-3 { background: linear-gradient(135deg, rgba(212, 175, 55, 0.18), rgba(212, 175, 55, 0.06)); border: 1.5px solid #d4af37; }
+.rtab-arrow-sym { font-size: 18px; line-height: 1; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rtab-arrow-title { font-weight: 700; font-size: 12px; margin: 0 0 4px; }
+.rtab-arrow-1 .rtab-arrow-title { color: #ccc; }
+.rtab-arrow-2 .rtab-arrow-title, .rtab-arrow-3 .rtab-arrow-title { color: #d4af37; }
+.rtab-arrow-body { font-size: 11px; color: #999; line-height: 1.55; margin: 0; }
+.rtab-arrow-2 .rtab-arrow-body, .rtab-arrow-3 .rtab-arrow-body { color: #c9b896; }
+.rtab-arrow-note { font-style: italic; color: #777; }
+.rtab-sym-green { color: #6dd394; }
+.rtab-sym-red { color: #e87a7a; }
+.rtab-sym-dot { color: #666; }
+.rtab-strongest {
+  display: inline-block;
+  background: #d4af37; color: #0a0e1a;
+  font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 10px;
+  margin-left: 4px; vertical-align: middle;
+}
+
+/* Video tutorial placeholder card */
+.rtab-video { background: rgba(60, 100, 180, 0.1); border: 1px solid rgba(100, 140, 200, 0.3); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.rtab-video-head { color: #8ab4f8; font-weight: 700; font-size: 12.5px; margin: 0 0 5px; }
+.rtab-video-body { color: #aaa; font-size: 11.5px; line-height: 1.6; margin: 0; padding-left: 4px; }
+
+/* Legal disclaimer */
+.rtab-disclaimer {
+  background: rgba(150, 100, 40, 0.1);
+  border: 1px solid rgba(180, 140, 60, 0.3);
+  border-radius: 6px;
+  padding: 11px 13px;
+  color: #c9a868; font-size: 10px; line-height: 1.6;
+}
+.rtab-disclaimer strong { color: #c9a868; }
+
+/* Cheat sheet 2×2 */
+.rtab-cheat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rtab-cheat-box { border-radius: 6px; padding: 10px 12px; }
+.rtab-cheat-gold  { background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.3); }
+.rtab-cheat-green { background: rgba(80, 200, 120, 0.08); border: 1px solid rgba(80, 200, 120, 0.3); }
+.rtab-cheat-red   { background: rgba(220, 80, 80, 0.08); border: 1px solid rgba(220, 80, 80, 0.3); }
+.rtab-cheat-label { color: #888; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; margin: 0 0 4px; }
+.rtab-cheat-val { font-size: 14px; font-weight: 700; margin: 0; }
+.rtab-cheat-gold .rtab-cheat-val { color: #d4af37; }
+.rtab-cheat-green .rtab-cheat-val { color: #6dd394; }
+.rtab-cheat-red .rtab-cheat-val { color: #e87a7a; }
+
+/* Compact arrow rows (ข้อมูลการใช้งาน) */
+.rtab-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; border-radius: 5px; padding: 8px 11px; margin-bottom: 6px; }
+.rtab-row:last-child { margin-bottom: 0; }
+.rtab-row-1 { background: rgba(150, 150, 150, 0.06); border: 1px solid #2a2a2a; }
+.rtab-row-2 { background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); }
+.rtab-row-3 { background: linear-gradient(90deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.06)); border: 1.5px solid #d4af37; }
+.rtab-pill { flex-shrink: 0; font-size: 9px; font-weight: 600; padding: 3px 8px; border-radius: 12px; }
+.rtab-row-1 .rtab-pill { background: #2a2a2a; color: #888; }
+.rtab-row-2 .rtab-pill { background: rgba(212, 175, 55, 0.3); color: #d4af37; }
+.rtab-row-3 .rtab-pill { background: #d4af37; color: #0a0e1a; font-weight: 700; }
+.rtab-row-sym { font-size: 14px; line-height: 1; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rtab-row-text { font-size: 11px; flex: 1; min-width: 120px; }
+.rtab-row-1 .rtab-row-text { color: #999; }
+.rtab-row-2 .rtab-row-text { color: #d4af37; }
+.rtab-row-3 .rtab-row-text { color: #d4af37; font-weight: 700; }
+
+/* FAQ (semantic <details>) */
+.rtab-faq { background: rgba(40, 40, 50, 0.4); border: 1px solid #2a2a2a; border-radius: 5px; padding: 10px 13px; margin-bottom: 6px; }
+.rtab-faq[open] { border-color: rgba(212, 175, 55, 0.3); }
+.rtab-faq summary {
+  color: #d4af37; font-size: 11.5px; font-weight: 500; cursor: pointer;
+  outline: none; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 24px;
+}
+.rtab-faq summary::-webkit-details-marker { display: none; }
+.rtab-faq summary::after { content: '＋'; margin-left: auto; color: #888; font-size: 13px; flex-shrink: 0; }
+.rtab-faq[open] summary::after { content: '－'; }
+.rtab-faq-ans { font-size: 11px; color: #aaa; margin-top: 8px; padding-left: 4px; line-height: 1.6; }
+
+/* Contact CTA */
+.rtab-contact {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.04));
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 8px; padding: 13px 14px;
+}
+.rtab-contact-icon {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(212, 175, 55, 0.2);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.rtab-contact-title { color: #d4af37; font-size: 12px; font-weight: 600; margin: 0 0 2px; }
+.rtab-contact-body { color: #c9b896; font-size: 11px; margin: 0; line-height: 1.5; }
+
+/* Mobile (≤480px) */
+@media (max-width: 480px) {
+  .rtab-grid2, .rtab-cheat { grid-template-columns: 1fr; }
+  .rtab-faq { padding: 8px 11px; }
+  .rtab-faq summary { min-height: 44px; }
+}
 </style>
 </head>
 
@@ -2907,6 +3052,100 @@ window.AurumGoldTV = (function () {
     + '<div class="room-panel-empty-icon">🚧</div>'
     + '<p>เร็วๆ นี้ — ทีมงานกำลังเตรียมข้อมูลให้ค่ะ</p></div>';
 
+  // ---- วิธีการใช้งาน (howto) — 4 numbered steps + video card + disclaimer ----
+  const HOWTO_HTML =
+    '<div class="rtab">'
+      + '<div class="rtab-step">'
+        + '<div class="rtab-step-head"><span class="rtab-badge">1</span><h3 class="rtab-step-title">Timeframe ที่รองรับ</h3></div>'
+        + '<div class="rtab-accent rtab-accent-gold">ใช้งานบน <strong>M5</strong> และ <strong>M15</strong> เท่านั้น เพื่อความแม่นยำของข้อมูลที่ Indicator ออกแบบไว้</div>'
+      + '</div>'
+      + '<div class="rtab-step">'
+        + '<div class="rtab-step-head"><span class="rtab-badge">2</span><h3 class="rtab-step-title">อ่านแนวโน้มจากแม่น้ำ EMA</h3></div>'
+        + '<p class="rtab-p">แม่น้ำคือกลุ่มเส้นค่าเฉลี่ยเคลื่อนที่ ใช้บอกแนวโน้มภาพรวมก่อนพิจารณาลูกศร</p>'
+        + '<div class="rtab-grid2">'
+          + '<div class="rtab-ebox rtab-ebox-red"><p class="rtab-ebox-title">🔴 แม่น้ำสีแดง</p><p>แนวโน้มขาลง — สังเกตจุดทิศทางลงเป็นหลัก</p></div>'
+          + '<div class="rtab-ebox rtab-ebox-green"><p class="rtab-ebox-title">🟢 แม่น้ำสีเขียว</p><p>แนวโน้มขาขึ้น — สังเกตจุดทิศทางขึ้นเป็นหลัก</p></div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="rtab-step">'
+        + '<div class="rtab-step-head"><span class="rtab-badge">3</span><h3 class="rtab-step-title">ลูกศร 3 ระดับนัยสำคัญ</h3></div>'
+        + '<div class="rtab-arrow rtab-arrow-1">'
+          + '<div class="rtab-arrow-sym" style="color:#888">▲ ▼</div>'
+          + '<p class="rtab-arrow-title">ระดับ 1 — ลูกศรเปล่า (ไม่มีข้อความ)</p>'
+          + '<p class="rtab-arrow-body">Trend Follow Marker — บอกทิศทางตามแนวโน้มเฉยๆ <span class="rtab-arrow-note">ไม่ใช่จุดสังเกตหลัก</span></p>'
+        + '</div>'
+        + '<div class="rtab-arrow rtab-arrow-2">'
+          + '<div class="rtab-arrow-sym"><span class="rtab-sym-green">▲ 3s-Bull</span> <span class="rtab-sym-dot">·</span> <span class="rtab-sym-red">▼ 3s-Bear</span></div>'
+          + '<p class="rtab-arrow-title">ระดับ 2 — มีตัวอักษร 3s-Bull / 3s-Bear</p>'
+          + '<p class="rtab-arrow-body">แท่งเทียนที่ระบบตรวจพบ <strong>นัยสำคัญ</strong> ในการเคลื่อนไหวของราคา → จุดน่าสนใจในการเริ่มพิจารณามุมมอง</p>'
+        + '</div>'
+        + '<div class="rtab-arrow rtab-arrow-3">'
+          + '<div class="rtab-arrow-sym"><span class="rtab-sym-green">▲▲ 3s-Bull</span> <span class="rtab-sym-dot">·</span> <span class="rtab-sym-red">▼▼ 3s-Bear</span><span class="rtab-strongest">⭐ STRONGEST</span></div>'
+          + '<p class="rtab-arrow-title">ระดับ 3 — ลูกศรซ้อน 2 ชั้น</p>'
+          + '<p class="rtab-arrow-body"><strong>จุดยืนยันสำคัญสูงสุด</strong> — โอกาสที่ราคาจะเคลื่อนไหวตามทิศทางที่ลูกศรชี้สูงมากที่สุดจากระบบ</p>'
+        + '</div>'
+      + '</div>'
+      + '<div class="rtab-step">'
+        + '<div class="rtab-step-head"><span class="rtab-badge">4</span><h3 class="rtab-step-title">การกำหนดระดับความเสี่ยง</h3></div>'
+        + '<div class="rtab-accent rtab-accent-red">🛡️ <strong>วาง Risk Level ไว้ใต้ลูกศรเสมอ</strong> — เพื่อรักษาอัตราส่วนความปลอดภัยที่เหมาะสม ผู้ใช้แต่ละท่านควรพิจารณาตามวินัยและแผนการบริหารความเสี่ยงของตนเอง</div>'
+      + '</div>'
+      + '<div class="rtab-video">'
+        + '<p class="rtab-video-head">🎬 คลิปสอนการใช้งานแบบละเอียด</p>'
+        + '<p class="rtab-video-body">เร็วๆ นี้ — ทีมงานกำลังเตรียมคลิปสอนใช้งาน Aurum Gold แบบ step-by-step สำหรับมือใหม่</p>'
+      + '</div>'
+      + '<div class="rtab-disclaimer">⚠️ <strong>ข้อตกลงการใช้งาน:</strong> ข้อมูลและตัวบ่งชี้ทั้งหมดเป็น<strong>บทวิเคราะห์ทางเทคนิค</strong>เพื่อใช้ประกอบการตัดสินใจของผู้ใช้เท่านั้น ไม่ใช่คำแนะนำการลงทุน การตัดสินใจใดๆ ผู้ใช้รับผิดชอบเอง</div>'
+    + '</div>';
+
+  // ---- ข้อมูลการใช้งาน (usage) — cheat sheet + arrows + risk + FAQ + contact ----
+  const USAGE_HTML =
+    '<div class="rtab">'
+      + '<div class="rtab-section">'
+        + '<p class="rtab-h rtab-h-lg">📋 สรุปย่อสำหรับใช้งาน (Cheat Sheet)</p>'
+        + '<div class="rtab-cheat">'
+          + '<div class="rtab-cheat-box rtab-cheat-gold"><p class="rtab-cheat-label">TIMEFRAME</p><p class="rtab-cheat-val">M5 · M15</p></div>'
+          + '<div class="rtab-cheat-box rtab-cheat-gold"><p class="rtab-cheat-label">สินทรัพย์ปัจจุบัน</p><p class="rtab-cheat-val">XAUUSD (Gold)</p></div>'
+          + '<div class="rtab-cheat-box rtab-cheat-green"><p class="rtab-cheat-label">🟢 แม่น้ำเขียว</p><p class="rtab-cheat-val">แนวโน้มขาขึ้น</p></div>'
+          + '<div class="rtab-cheat-box rtab-cheat-red"><p class="rtab-cheat-label">🔴 แม่น้ำแดง</p><p class="rtab-cheat-val">แนวโน้มขาลง</p></div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="rtab-section">'
+        + '<p class="rtab-h rtab-h-md">🏹 ลูกศร 3 ระดับนัยสำคัญ</p>'
+        + '<div class="rtab-row rtab-row-1">'
+          + '<span class="rtab-pill">ระดับ 1</span>'
+          + '<span class="rtab-row-sym" style="color:#888">▲ ▼</span>'
+          + '<span class="rtab-row-text">ลูกศรเปล่า → บอกทิศทางตามแนวโน้มเฉยๆ</span>'
+        + '</div>'
+        + '<div class="rtab-row rtab-row-2">'
+          + '<span class="rtab-pill">ระดับ 2</span>'
+          + '<span class="rtab-row-sym"><span class="rtab-sym-green">▲ 3s-Bull</span> <span class="rtab-sym-dot">·</span> <span class="rtab-sym-red">▼ 3s-Bear</span></span>'
+          + '<span class="rtab-row-text">จุดน่าสนใจที่มีนัยสำคัญ</span>'
+        + '</div>'
+        + '<div class="rtab-row rtab-row-3">'
+          + '<span class="rtab-pill">ระดับ 3</span>'
+          + '<span class="rtab-row-sym"><span class="rtab-sym-green">▲▲ 3s-Bull</span> <span class="rtab-sym-dot">·</span> <span class="rtab-sym-red">▼▼ 3s-Bear</span></span>'
+          + '<span class="rtab-row-text">⭐ จุดยืนยันสำคัญสูงสุด</span>'
+        + '</div>'
+      + '</div>'
+      + '<div class="rtab-section">'
+        + '<div class="rtab-accent rtab-accent-red">🛡️ <strong>Risk Level:</strong> วางใต้ลูกศรเสมอ เพื่อรักษาอัตราส่วนความปลอดภัยที่เหมาะสม</div>'
+      + '</div>'
+      + '<div class="rtab-section">'
+        + '<p class="rtab-h rtab-h-md">❓ คำถามที่พบบ่อย</p>'
+        + '<details class="rtab-faq" open><summary>ทำไมต้องใช้ M5 หรือ M15 เท่านั้น?</summary><div class="rtab-faq-ans">Indicator ออกแบบ Algorithm มาเฉพาะ Timeframe ทั้ง 2 — การใช้ TF อื่นจะได้ผลลัพธ์ที่ไม่ตรงกับการ test และอาจให้บทวิเคราะห์ที่คลาดเคลื่อน</div></details>'
+        + '<details class="rtab-faq"><summary>ลูกศรเปล่ากับ 3s-Bull/Bear ต่างกันยังไง?</summary><div class="rtab-faq-ans">ลูกศรเปล่าบอกแค่ทิศทางตามแนวโน้ม (Trend Follow) — ส่วน <strong>3s-Bull/Bear</strong> คือจุดที่ระบบตรวจพบนัยสำคัญในการเคลื่อนไหวของราคา ใช้เป็นจุดน่าสนใจในการเริ่มพิจารณามุมมอง</div></details>'
+        + '<details class="rtab-faq"><summary>ลูกศรซ้อน 2 ชั้นพบบ่อยแค่ไหน?</summary><div class="rtab-faq-ans">เป็นจุดที่ระบบมั่นใจสูงสุด → พบไม่บ่อย แต่เมื่อพบจะเป็นจุดที่มีคุณภาพสูงที่สุด ผู้ใช้บางท่านเลือกรอเฉพาะระดับนี้เพื่อความแม่นยำ</div></details>'
+        + '<details class="rtab-faq"><summary>ต้องจัดการ Risk Level ยังไง?</summary><div class="rtab-faq-ans">วางใต้ลูกศรเสมอ เพื่อรักษาอัตราส่วนความปลอดภัย ผู้ใช้แต่ละท่านควรกำหนดตามวินัยและแผนการบริหารความเสี่ยงของตนเอง — Aurum AI ไม่ได้กำหนดตายตัวเพราะแต่ละคนมีแผนต่างกัน</div></details>'
+        + '<details class="rtab-faq"><summary>มีคลิปสอนใช้งานไหม?</summary><div class="rtab-faq-ans">มีคลิปแนะนำสั้นๆ ตอนกรอก TradingView Username (สำหรับมือใหม่) ในหน้า welcome popup — และ <strong>คลิปสอนใช้งาน Indicator แบบละเอียดเตรียมเปิดเร็วๆ นี้</strong></div></details>'
+      + '</div>'
+      + '<div class="rtab-contact">'
+        + '<span class="rtab-contact-icon">💬</span>'
+        + '<div>'
+          + '<p class="rtab-contact-title">มีคำถามเพิ่มเติม?</p>'
+          + '<p class="rtab-contact-body">ติดต่อทีมงานผ่าน <strong>LINE @aurumai</strong> · ตอบภายใน 24 ชั่วโมง</p>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+
   const TITLES = {
     tv: 'TradingView Username ของคุณ',
     usage: 'ข้อมูลการใช้งาน',
@@ -2948,7 +3187,10 @@ window.AurumGoldTV = (function () {
       p.classList.add('open');
       loadTvUsername();
     } else {
-      p.innerHTML = cardShell(TITLES[name], PLACEHOLDER);
+      const body = name === 'howto' ? HOWTO_HTML
+                 : name === 'usage' ? USAGE_HTML
+                 : PLACEHOLDER;
+      p.innerHTML = cardShell(TITLES[name], body);
       p.classList.add('open');
     }
   }
