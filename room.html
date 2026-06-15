@@ -381,6 +381,95 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 }
 
 /* =====================================================================
+   Header logout — outline button + email, plus a confirm modal that
+   mirrors the #tv-popup pattern (no native confirm() dialog).
+   ===================================================================== */
+.logout-user-email {
+  font-size: 12px;
+  color: #c9b896;            /* gold-tinted gray (warmDim) */
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d4af37; /* gold border */
+  color: #d4af37;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 8px;        /* matches header rounded-lg controls */
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.logout-btn:hover:not(:disabled) { background: rgba(212, 175, 55, 0.1); color: #e7c66e; border-color: #e7c66e; }
+.logout-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.logout-btn .logout-spinner {
+  display: none;
+  width: 13px; height: 13px;
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  border-top-color: #d4af37;
+  border-radius: 50%;
+  animation: chartSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+.logout-btn.loading .logout-spinner { display: inline-block; }
+.logout-btn.loading .logout-icon { display: none; }
+@media (max-width: 640px) {
+  .logout-btn { min-height: 44px; padding: 0 14px; } /* ≥44px touch target */
+}
+
+/* Confirm modal — reuses the .tv-card look from #tv-popup. */
+#logout-confirm {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  background: rgba(0, 0, 0, 0.7);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+#logout-confirm.open { display: flex; }
+.logout-actions { display: flex; gap: 10px; margin-top: 4px; }
+.logout-confirm-btn, .logout-cancel-btn {
+  flex: 1;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 13px;
+  border-radius: 12px;
+  cursor: pointer;
+  min-height: 44px;
+  transition: box-shadow 0.2s, transform 0.15s, opacity 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+}
+.logout-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #f5cd52, #d4af37);
+  color: #0a0420;
+  border: none;
+}
+.logout-confirm-btn:hover:not(:disabled) { box-shadow: 0 0 26px rgba(212, 175, 55, 0.5); transform: translateY(-1px); }
+.logout-confirm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.logout-cancel-btn {
+  background: transparent;
+  border: 1px solid #2c1a4a;
+  color: #c9b896;
+}
+.logout-cancel-btn:hover:not(:disabled) { border-color: #8b7029; color: #f5e8c7; }
+.logout-cancel-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* =====================================================================
    Room menu bar + slide-in panels (TradingView Username + placeholders).
    Horizontally scrollable pills on mobile; panel pushes the room down.
    ===================================================================== */
@@ -570,6 +659,14 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     if (dateEl) dateEl.textContent = '· หมดอายุ ' + formattedDate;
   }
 
+  // Show the logged-in user's email in the header (small dim label).
+  function renderUserEmail(email) {
+    const el = document.getElementById('room-user-email');
+    if (!el || !email) return;
+    el.textContent = email;
+    el.title = email;
+  }
+
   async function runGate() {
     try {
       const { data: { session } } = await sb.auth.getSession();
@@ -580,6 +677,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
       // Passed — show the real expiry, reveal the room, watch for mid-session expiry.
       renderExpiry(sub.expires_at);
+      renderUserEmail(session.user && session.user.email);
       reveal();
       window.__AURUM_GATE_PASSED = true;
       setInterval(recheck, 5 * 60 * 1000);
@@ -599,6 +697,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
       const sub = await hasActiveAnalysis(session);
       if (!sub) { showNoSubscriptionScreen(session.user && session.user.email); return; }
       renderExpiry(sub.expires_at);
+      renderUserEmail(session.user && session.user.email);
     } catch (e) { /* transient — keep current state, try again next tick */ }
   }
 
@@ -715,6 +814,89 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 })();
 </script>
 
+<!-- =====================================================================
+     Header logout — confirm modal + Supabase signOut. Defensive: always
+     clears local auth tokens and redirects out even if signOut() throws.
+     ===================================================================== -->
+<script>
+(function () {
+  // Where to send the user after logging out (root is the safe fallback).
+  const SIGNIN_URL = 'https://aurumlive.com/signin';
+
+  // Remove any Supabase auth tokens this origin persisted (sb-* keys).
+  function clearAuthTokens() {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('sb-') === 0) keys.push(k);
+      }
+      keys.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } });
+    } catch (e) { /* storage unavailable — nothing to clear */ }
+  }
+
+  function wire() {
+    const btn       = document.getElementById('logout-btn');
+    const modal     = document.getElementById('logout-confirm');
+    const cancelBtn = document.getElementById('logout-cancel');
+    const yesBtn    = document.getElementById('logout-confirm-yes');
+    if (!btn || !modal || !yesBtn) return;
+
+    let busy = false;
+
+    function openModal() {
+      modal.classList.add('open');
+      if (cancelBtn) cancelBtn.focus();
+    }
+    function closeModal() {
+      if (busy) return;            // don't let the user dismiss mid-logout
+      modal.classList.remove('open');
+    }
+
+    async function doLogout() {
+      if (busy) return;
+      busy = true;
+
+      // Loading state — disable controls + show spinners on both buttons.
+      btn.classList.add('loading');
+      btn.disabled = true;
+      const hdrLabel = btn.querySelector('.logout-label');
+      if (hdrLabel) hdrLabel.textContent = 'กำลังออก...';
+      yesBtn.disabled = true;
+      if (cancelBtn) cancelBtn.disabled = true;
+      const spin   = yesBtn.querySelector('.logout-modal-spinner');
+      const yLabel = yesBtn.querySelector('.logout-confirm-label');
+      if (spin) spin.style.display = 'inline-block';
+      if (yLabel) yLabel.textContent = 'กำลังออก...';
+
+      try {
+        if (window.__aurumSb && window.__aurumSb.auth) {
+          await window.__aurumSb.auth.signOut();
+        }
+      } catch (e) {
+        /* defensive — redirect out regardless of signOut() failure */
+      }
+      clearAuthTokens();
+      window.location.href = SIGNIN_URL;
+    }
+
+    btn.addEventListener('click', openModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    yesBtn.addEventListener('click', doLogout);
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
+})();
+</script>
+
 <!-- ============ VARIANT C — Pro Dashboard (Phase 2.5 · on-chart overlays) ============ -->
 
 <div class="h-screen flex flex-col max-w-7xl mx-auto">
@@ -734,6 +916,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <!-- Logged-in user email — small, dim, gold-tinted (hidden on mobile) -->
+      <span id="room-user-email" class="logout-user-email hidden sm:inline-block"></span>
       <!-- Sound toggle -->
       <button id="sound-toggle" title="เสียงแจ้งเตือน" class="w-9 h-9 rounded-lg border border-line bg-surface flex items-center justify-center text-warmDim hover:text-gold hover:border-goldDim transition">
         <svg id="sound-on-icon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 00-2.5-4.03v8.05A4.5 4.5 0 0016.5 12zM14 3.23v2.06a7 7 0 010 13.42v2.06A9 9 0 0014 3.23z"/></svg>
@@ -750,6 +934,14 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
         </span>
         <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap ml-1">ต่ออายุ</button>
       </div>
+      <!-- Logout — outline gold button, opens the confirm modal -->
+      <button id="logout-btn" type="button" class="logout-btn" title="ออกจากระบบ">
+        <svg class="logout-icon w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        <span class="logout-spinner"></span>
+        <span class="logout-label">ออกจากระบบ</span>
+      </button>
     </div>
   </header>
 
@@ -845,6 +1037,25 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <p id="tv-feedback" class="tv-feedback neutral" aria-live="polite">ใช้ตัวอักษร a-z, 0-9, _ เท่านั้น (3-25 ตัว)</p>
     <p id="tv-error" class="tv-error" role="alert"></p>
     <button id="tv-submit" type="button" disabled>ยืนยัน</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     Logout confirm modal — mirrors the #tv-popup card. Dismissable via
+     overlay click / Esc / "ยกเลิก"; "ออกจากระบบ" runs the signOut flow.
+     ===================================================================== -->
+<div id="logout-confirm" role="dialog" aria-modal="true" aria-labelledby="logout-confirm-title">
+  <div class="tv-card">
+    <div class="tv-emoji">👋</div>
+    <h2 id="logout-confirm-title" class="tv-title">ออกจากระบบ?</h2>
+    <p class="tv-lead">คุณต้องการออกจากระบบใช่หรือไม่?<br>จะต้องเข้าสู่ระบบใหม่เพื่อกลับเข้าห้องบทวิเคราะห์อีกครั้ง</p>
+    <div class="logout-actions">
+      <button id="logout-cancel" type="button" class="logout-cancel-btn">ยกเลิก</button>
+      <button id="logout-confirm-yes" type="button" class="logout-confirm-btn">
+        <span class="tv-spinner-sm logout-modal-spinner" style="display:none"></span>
+        <span class="logout-confirm-label">ออกจากระบบ</span>
+      </button>
+    </div>
   </div>
 </div>
 
