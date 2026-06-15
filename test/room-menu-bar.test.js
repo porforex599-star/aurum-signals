@@ -183,13 +183,13 @@ function click(window, el) { el.dispatchEvent(new window.MouseEvent('click', { b
       assert.ok(!pill(document, 'tv').classList.contains('active'), 'no pill highlighted');
     });
 
-    await test('placeholder pills open a panel with the "เร็วๆ นี้" message', async () => {
+    await test('content pills open their panels and toggle active state', async () => {
       click(window, pill(document, 'usage'));
-      await waitFor(() => panelOpen(document) && /เร็วๆ นี้/.test(document.getElementById('room-panel').textContent));
-      assert.ok(/เร็วๆ นี้/.test(document.getElementById('room-panel').textContent), 'usage placeholder shown');
+      await waitFor(() => panelOpen(document) && /Cheat Sheet/.test(document.getElementById('room-panel').textContent));
+      assert.ok(/Cheat Sheet/.test(document.getElementById('room-panel').textContent), 'usage content shown');
 
       click(window, pill(document, 'howto'));
-      await waitFor(() => /เร็วๆ นี้/.test(document.getElementById('room-panel').textContent)
+      await waitFor(() => /Timeframe ที่รองรับ/.test(document.getElementById('room-panel').textContent)
         && pill(document, 'howto').classList.contains('active'));
       assert.ok(pill(document, 'howto').classList.contains('active'), 'howto pill highlighted');
       assert.ok(!pill(document, 'usage').classList.contains('active'), 'previous pill deactivated');

@@ -4,14 +4,16 @@
   "private": true,
   "description": "Aurum Analysis — static frontend (no build step). package.json exists only to run the test harnesses.",
   "scripts": {
-    "test": "node test/pattern-markers.test.js && node test/room-phase7.test.js && node test/room-phasec-step3.test.js && node test/room-menu-bar.test.js && node test/room-welcome-enhance.test.js",
+    "test": "node test/banned-vocab.test.js && node test/pattern-markers.test.js && node test/room-phase7.test.js && node test/room-phasec-step3.test.js && node test/room-menu-bar.test.js && node test/room-welcome-enhance.test.js && node test/room-tab-content.test.js",
     "test:patterns": "node test/pattern-markers.test.js",
     "test:room": "node test/room-phase7.test.js",
     "test:tv": "node test/room-phasec-step3.test.js",
     "test:menu": "node test/room-menu-bar.test.js",
-    "test:welcome": "node test/room-welcome-enhance.test.js"
+    "test:welcome": "node test/room-welcome-enhance.test.js",
+    "test:tabs": "node test/room-tab-content.test.js",
+    "test:vocab": "node test/banned-vocab.test.js"
   },
   "devDependencies": {
-    "jsdom": "^24.0.0"
+    "jsdom": "^24.1.3"
   }
 }
