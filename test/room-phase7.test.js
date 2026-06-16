@@ -53,8 +53,8 @@ async function waitFor(predicate, { timeout = 2000, step = 15 } = {}) {
 }
 
 /* ---- fixtures ------------------------------------------------------------- */
-function row(id, symbol, bias, chartUrl, secondsAgo) {
-  return {
+function row(id, symbol, bias, chartUrl, secondsAgo, extra) {
+  return Object.assign({
     id, symbol, timeframe: 'M15', bias,
     candles: [], target_zones: [], sd_zones: [], pattern_markers: [],
     confidence: 80, key_level: 2400, invalidation_price: 2390, rr_ratio: 2,
@@ -62,7 +62,15 @@ function row(id, symbol, bias, chartUrl, secondsAgo) {
     created_at: new Date(Date.now() - (secondsAgo || 0) * 1000).toISOString(),
     chart_image_url: chartUrl,
     chart_image_generated_at: chartUrl ? new Date().toISOString() : null,
-  };
+  }, extra || {});
+}
+
+// An AI-scheduled briefing (Phase B.4): no chart image, surfaced on source.
+function aiRow(id, slot, secondsAgo) {
+  return row(id, 'XAUUSD', 'bullish', null, secondsAgo, {
+    source: 'ai_scheduled', schedule_slot: slot, timeframe: 'briefing',
+    note: 'บทวิเคราะห์ XAUUSD ช่วงเช้า\n\n📊 ภาพรวมตลาด\nทดสอบเนื้อหา',
+  });
 }
 
 /* ---- mock Supabase client (gate auth + feed query + realtime channels) ---- */
@@ -77,13 +85,18 @@ function makeSupabaseStub(rows, captures) {
       },
       from() {
         const qb = {
-          _notNull: false,
+          _filtered: false,
           select() { return qb; },
           order() { return qb; },
-          not(col, op, val) { captures.not = { col, op, val }; qb._notNull = true; return qb; },
-          // The real query resolves on .limit(); emulate the server-side filter.
+          // Phase B.4 — loadRealFeed now uses .or() to admit AI-scheduled posts
+          // alongside chart-image Pine posts.
+          or(filter) { captures.or = filter; qb._filtered = true; return qb; },
+          // The real query resolves on .limit(); emulate the server-side filter:
+          // chart_image_url IS NOT NULL OR source = 'ai_scheduled'.
           async limit() {
-            const data = qb._notNull ? rows.filter((r) => r.chart_image_url != null) : rows.slice();
+            const data = qb._filtered
+              ? rows.filter((r) => r.chart_image_url != null || r.source === 'ai_scheduled')
+              : rows.slice();
             return { data, error: null };
           },
         };
@@ -153,17 +166,23 @@ function listRowIds(document) {
       row('p1', 'XAUUSD', 'bullish', 'https://img.test/p1.png', 5),
       row('p2', 'EURUSD', 'bearish', 'https://img.test/p2.png', 60),
       row('p3', 'BTCUSD', 'bullish', null, 120), // old test webhook, no image
+      aiRow('a1', 'morning', 90),                // AI briefing, no image → still shown
     ];
     const { document, captures } = await boot(rows);
     await waitFor(() => listRowIds(document).length > 0);
 
-    test('loadRealFeed calls .not(chart_image_url, is, null)', () => {
-      assert.deepStrictEqual(captures.not, { col: 'chart_image_url', op: 'is', val: null });
+    test('loadRealFeed uses .or(chart_image_url OR ai_scheduled)', () => {
+      assert.strictEqual(captures.or, 'chart_image_url.not.is.null,source.eq.ai_scheduled');
     });
-    test('only posts with a chart image appear (no-chart row filtered out)', () => {
+    test('chart-image posts AND ai_scheduled briefings appear; no-chart Pine row filtered', () => {
       const ids = listRowIds(document);
-      assert.deepStrictEqual(ids.sort(), ['p1', 'p2']);
+      assert.deepStrictEqual(ids.sort(), ['a1', 'p1', 'p2']);
       assert.strictEqual(document.getElementById('row-p3'), null);
+    });
+    test('ai_scheduled briefing renders its schedule-slot badge', () => {
+      const rowEl = document.getElementById('row-a1');
+      assert.ok(rowEl, 'ai_scheduled row must be in the list');
+      assert.ok(rowEl.textContent.includes('AI · ช่วงเช้า'), 'morning badge expected on the list row');
     });
 
     /* --- 2. inline <img>, no Lightweight Charts canvas -------------------- */
@@ -212,7 +231,7 @@ function listRowIds(document) {
       assert.ok(typeof captures.insertCb === 'function', 'INSERT callback must be registered');
       captures.insertCb({ new: row('p3', 'BTCUSD', 'bullish', null, 0) });
       assert.strictEqual(document.getElementById('row-p3'), null);
-      assert.deepStrictEqual(listRowIds(document).sort(), ['p1', 'p2']);
+      assert.deepStrictEqual(listRowIds(document).sort(), ['a1', 'p1', 'p2']);
     });
     test('realtime UPDATE filling chart_image_url adds the row at the top', () => {
       assert.ok(typeof captures.updateCb === 'function', 'UPDATE callback must be registered');
@@ -225,6 +244,12 @@ function listRowIds(document) {
       captures.updateCb({ new: row('p3', 'BTCUSD', 'bullish', 'https://img.test/p3.png', 0) });
       const ids = listRowIds(document);
       assert.strictEqual(ids.filter((x) => x === 'p3').length, 1);
+    });
+    test('realtime INSERT of an ai_scheduled briefing (no image) appears immediately', () => {
+      captures.insertCb({ new: aiRow('a2', 'evening', 0) });
+      const ids = listRowIds(document);
+      assert.ok(ids.includes('a2'), 'evening briefing should be added live without a chart image');
+      assert.strictEqual(ids[0], 'a2', 'newest briefing should be at the top');
     });
   }
 
