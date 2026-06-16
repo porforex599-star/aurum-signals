@@ -31,6 +31,10 @@ tailwind.config = {
         ok: '#22c55e',
         okBg: '#0d2417',
         warn: '#f5c451',
+        cyan: '#4fc3d9',
+        success2: '#0fbf6a',
+        danger2: '#e24b4a',
+        warning2: '#ef9f27',
         warm: '#f5e8c7',
         warmDim: '#c9b896',
         t2: '#a99fc4',
@@ -901,10 +905,130 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   .rtab-faq { padding: 8px 11px; }
   .rtab-faq summary { min-height: 44px; }
 }
+
+/* =====================================================================
+   Room redesign v3 (Pro) — refined dark-luxury design system.
+   Brand: gold #d4af37 · cyan LIVE accent #4fc3d9. All effects are
+   subtle/premium — no thick shadows, neon, glitch or fast pulses.
+   ===================================================================== */
+
+/* Starfield canvas — fixed behind the app shell, slow drift, dim. */
+#starfield {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none; opacity: 0.5;
+}
+.h-screen.flex.flex-col { position: relative; z-index: 1; }
+
+/* Live indicator — 2s breathing pulse (replaces the 1.5s .live-dot for
+   the always-on "ออนไลน์"/LIVE markers). */
+@keyframes pulse2 { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.pulse-2s { animation: pulse2 2s ease-in-out infinite; }
+.live-ring {
+  position: relative;
+}
+.live-ring::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 999px;
+  border: 1px solid rgba(79,195,217,0.5); animation: liveRing 2s ease-out infinite;
+}
+@keyframes liveRing {
+  0% { transform: scale(0.8); opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Card hover — lift 2px + gold glow border, 200ms. */
+.lift-card { transition: transform .2s cubic-bezier(.4,0,.2,1), border-color .2s, box-shadow .2s; }
+.lift-card:hover {
+  transform: translateY(-2px);
+  border-color: #8b7029;
+  box-shadow: 0 0 0 1px rgba(212,175,55,0.18), 0 10px 26px -16px rgba(212,175,55,0.5);
+}
+
+/* Skeleton shimmer loading state. */
+.skeleton {
+  position: relative; overflow: hidden; background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: ''; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* Conic-gradient border on the featured card. */
+.featured-shell {
+  position: relative; border-radius: 18px; padding: 1px;
+  background: conic-gradient(from 140deg, rgba(212,175,55,0.55), rgba(79,195,217,0.18), rgba(212,175,55,0.05), rgba(212,175,55,0.55));
+}
+.featured-inner {
+  border-radius: 17px;
+  background: linear-gradient(165deg, rgba(36,26,13,0.55), rgba(22,10,46,0.85));
+}
+
+/* Filter pills (timeframe / confidence) — 200ms transitions. */
+.tf-pill, .conf-btn {
+  transition: background .2s cubic-bezier(.4,0,.2,1), color .2s, border-color .2s;
+}
+.tf-pill.active { background: #d4af37; color: #0a0420; border-color: #d4af37; font-weight: 600; }
+
+/* Section headers for the new dashboard sections. */
+.section-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #e7c66e; font-weight: 600;
+}
+.section-rule { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(212,175,55,0.25), transparent); }
+
+/* Impact badges (news intelligence). */
+.impact-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: 999px; text-transform: uppercase;
+}
+.impact-high   { background: rgba(226,75,74,0.14);  color: #f08b8a; border: 1px solid rgba(226,75,74,0.4); }
+.impact-medium { background: rgba(239,159,39,0.14); color: #f3c178; border: 1px solid rgba(239,159,39,0.4); }
+.impact-low    { background: rgba(79,195,217,0.12); color: #8fd6e6; border: 1px solid rgba(79,195,217,0.35); }
+
+/* AI auto-push floating widget — bottom corner, blurred glass. */
+#ai-push-widget {
+  position: fixed; right: 16px; bottom: 16px; z-index: 55;
+  width: 280px; max-width: calc(100vw - 32px);
+  background: rgba(16,8,32,0.82); backdrop-filter: blur(14px);
+  border: 1px solid #2c1a4a; border-radius: 16px; padding: 13px 14px;
+  box-shadow: 0 18px 40px -22px rgba(0,0,0,0.9);
+  transform: translateY(8px); opacity: 0;
+  animation: aiIn .5s ease-out .4s forwards;
+  transition: border-color .2s, box-shadow .2s;
+}
+#ai-push-widget:hover { border-color: #3a6f7a; box-shadow: 0 0 0 1px rgba(79,195,217,0.18), 0 18px 40px -20px rgba(0,0,0,0.9); }
+@keyframes aiIn { to { transform: translateY(0); opacity: 1; } }
+#ai-push-widget.collapsed { width: auto; }
+#ai-push-widget .ai-body { transition: opacity .2s; }
+#ai-push-widget.collapsed .ai-body { display: none; }
+@media (max-width: 639px) {
+  #ai-push-widget { right: 10px; bottom: 10px; width: 220px; padding: 10px 12px; }
+}
+
+/* Count-up numbers should not reflow as digits change. */
+.count-up { font-variant-numeric: tabular-nums; }
+
+/* Reduce motion / mobile — calm everything down. */
+@media (max-width: 639px) {
+  #starfield { display: none; }
+  .lift-card:hover { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #starfield { display: none; }
+  .pulse-2s, .live-ring::after, .skeleton::after, #ai-push-widget { animation: none; }
+  .lift-card { transition: none; }
+}
 </style>
 </head>
 
 <body class="text-warm font-sans antialiased">
+<!-- Subtle drifting starfield (desktop/tablet only; vanilla canvas) -->
+<canvas id="starfield" aria-hidden="true"></canvas>
 
 <!-- =====================================================================
      Access gate (Option A) — runs before the room renders.
@@ -1218,8 +1342,9 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
       <div class="min-w-0">
         <h1 class="serif-h text-gold text-xl leading-none font-semibold truncate">AURUM ANALYSIS</h1>
         <p class="text-[11px] text-t2 flex items-center gap-1.5 mt-0.5">
-          <span class="inline-block w-1.5 h-1.5 rounded-full live-dot" style="background:#22c55e"></span>
-          247 members · <span class="text-goldSoft">12 ออนไลน์</span>
+          <span class="inline-block w-1.5 h-1.5 rounded-full pulse-2s" style="background:#22c55e"></span>
+          <span id="member-count" class="count-up" data-to="247">247</span> สมาชิก ·
+          <span class="text-goldSoft"><span id="online-count" class="count-up" data-to="12">12</span> ออนไลน์</span>
         </p>
       </div>
     </div>
@@ -1298,12 +1423,24 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
             <option value="all">ทุกสินทรัพย์</option>
             <option value="XAUUSD">XAUUSD</option>
             <option value="EURUSD">EURUSD</option>
+            <option value="USDJPY">USDJPY</option>
             <option value="BTCUSD">BTCUSD</option>
+            <option value="NAS100">NAS100</option>
           </select>
           <select id="f-sort" class="flex-1 bg-surface border border-line rounded-lg text-xs text-warm pl-3 pr-7 py-2 outline-none focus:border-goldDim">
             <option value="new">ใหม่สุดก่อน</option>
             <option value="old">เก่าสุดก่อน</option>
           </select>
+        </div>
+        <!-- Timeframe pills -->
+        <div class="flex items-center gap-1.5 text-[11px] text-warmDim overflow-x-auto">
+          <span class="mr-0.5 flex-shrink-0">กรอบเวลา</span>
+          <button class="tf-pill flex-shrink-0 px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-tf="all">ทั้งหมด</button>
+          <button class="tf-pill flex-shrink-0 px-2 py-1 rounded-md border border-line bg-surface text-warmDim font-mono" data-tf="M5">M5</button>
+          <button class="tf-pill flex-shrink-0 px-2 py-1 rounded-md border border-line bg-surface text-warmDim font-mono" data-tf="M15">M15</button>
+          <button class="tf-pill flex-shrink-0 px-2 py-1 rounded-md border border-line bg-surface text-warmDim font-mono" data-tf="H1">H1</button>
+          <button class="tf-pill flex-shrink-0 px-2 py-1 rounded-md border border-line bg-surface text-warmDim font-mono" data-tf="H4">H4</button>
+          <button class="tf-pill flex-shrink-0 px-2 py-1 rounded-md border border-line bg-surface text-warmDim font-mono" data-tf="D1">D1</button>
         </div>
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-1.5 text-[11px] text-warmDim">
@@ -1315,13 +1452,27 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
           </div>
         </div>
       </div>
+      <!-- Featured analysis (latest 5★ + ยืนยันแล้ว) — populated by renderFeatured() -->
+      <div id="featured" class="flex-shrink-0 px-3 pt-3"></div>
+      <!-- Timeline -->
+      <div class="flex-shrink-0 px-3 pt-3 pb-1">
+        <div class="section-head">
+          <span>Analysis timeline</span>
+          <span class="section-rule"></span>
+          <span id="timeline-count" class="text-t3 text-[10px] font-mono normal-case tracking-normal"></span>
+        </div>
+      </div>
       <!-- List -->
-      <div id="list" class="flex-1 min-h-0 overflow-y-auto scroll-y p-2 space-y-1.5"></div>
+      <div id="list" class="flex-1 min-h-0 overflow-y-auto scroll-y p-2 pt-1 space-y-1.5"></div>
     </aside>
 
     <!-- RIGHT: detail (65%) -->
     <section id="pane-detail" class="hidden md:flex flex-1 min-h-0 flex-col overflow-y-auto scroll-y">
       <div id="detail" class="p-4 sm:p-5"></div>
+      <!-- News intelligence (AI-filtered) — mock in Phase 1, real ForexFactory+Finnhub in Phase 2 -->
+      <div id="news-section" class="px-4 sm:px-5 pb-2"></div>
+      <!-- Movement alerts — mock in Phase 1 -->
+      <div id="movement-section" class="px-4 sm:px-5 pb-6"></div>
       <!-- Chart lock state — shown while a username is still required (toggled by the TV module) -->
       <div id="tv-lock" role="region" aria-label="TradingView Indicator ยังไม่ปลดล็อค">
         <div class="tv-lock-badge" aria-hidden="true">🔒</div>
@@ -1336,6 +1487,26 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
 <!-- Toast container -->
 <div id="toast-wrap" aria-live="polite"></div>
+
+<!-- AURUM AI auto-push floating widget (status mock in Phase 1) -->
+<div id="ai-push-widget" role="status" aria-live="polite">
+  <div class="flex items-center gap-2.5">
+    <span class="live-ring flex-shrink-0 inline-flex">
+      <span class="w-2.5 h-2.5 rounded-full pulse-2s" style="background:#4fc3d9;box-shadow:0 0 8px rgba(79,195,217,0.8)"></span>
+    </span>
+    <div class="min-w-0 flex-1">
+      <p class="text-[11px] font-semibold text-warm leading-tight">AURUM AI</p>
+      <p class="text-[10px] text-cyan leading-tight">● ส่งข่าวลง LINE Group อัตโนมัติ</p>
+    </div>
+    <button id="ai-push-toggle" type="button" class="text-t3 hover:text-warm w-6 h-6 flex items-center justify-center rounded-md" aria-label="ย่อ/ขยาย" title="ย่อ/ขยาย">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+    </button>
+  </div>
+  <div class="ai-body mt-2.5 pt-2.5 border-t border-line flex items-center justify-between text-[10px]">
+    <span class="text-t2">ส่งล่าสุด <span id="ai-last-push" class="text-warmDim font-mono">—</span></span>
+    <span class="text-t2">วันนี้ <span id="ai-pushes-today" class="count-up text-cyan font-mono font-semibold" data-to="12">0</span> ครั้ง</span>
+  </div>
+</div>
 
 <!-- =====================================================================
      Phase C Step 3 — TradingView username welcome popup.
@@ -1453,7 +1624,7 @@ const PRICE_FMT = {
 let POSTS = [];
 function getById(id) { return POSTS.find(p => p.id === id); }
 
-const state = { symbol: 'all', sort: 'new', conf: 0, selected: null };
+const state = { symbol: 'all', timeframe: 'all', sort: 'new', conf: 0, selected: null };
 
 /* Deep link: when opened from Telegram with ?post_id=..., applyDeepLink() pins
    the detail to that authoritative analysis_posts row and auto-opens the
@@ -1502,7 +1673,10 @@ const listEl = document.getElementById('list');
 const detailEl = document.getElementById('detail');
 
 function visibleList() {
-  let list = POSTS.filter(p => (state.symbol === 'all' || p.symbol === state.symbol) && p.confidence >= state.conf);
+  let list = POSTS.filter(p =>
+    (state.symbol === 'all' || p.symbol === state.symbol) &&
+    (state.timeframe === 'all' || p.timeframe === state.timeframe) &&
+    p.confidence >= state.conf);
   list.sort((a, b) => state.sort === 'new' ? a.minsAgo - b.minsAgo : b.minsAgo - a.minsAgo);
   return list;
 }
@@ -1523,7 +1697,7 @@ function renderList() {
     const active = p.id === state.selected;
     const el = document.createElement('button');
     el.id = 'row-' + p.id;
-    el.className = 'list-item relative w-full text-left bg-surface border border-line rounded-xl p-3 flex flex-col gap-1.5'
+    el.className = 'list-item lift-card relative w-full text-left bg-surface border border-line rounded-xl p-3 flex flex-col gap-1.5'
       + (active ? ' active' : '') + (p.isNew ? ' row-new' : '');
     el.innerHTML = `
       <span class="item-bar absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gold"></span>
@@ -1540,12 +1714,14 @@ function renderList() {
       </div>
       <div class="flex items-center justify-between">
         ${statusChipSm(p)}
-        <span class="text-[10px] text-t3 font-mono">อัตราส่วน 1:${p.rewardRatio}</span>
       </div>`;
     el.addEventListener('click', () => selectPost(p.id));
     listEl.appendChild(el);
   });
   updateUnreadBadge();
+  const tlCount = document.getElementById('timeline-count');
+  if (tlCount) tlCount.textContent = list.length + ' รายการ';
+  if (typeof renderFeatured === 'function') renderFeatured();
 }
 
 function selectPost(id) {
@@ -2071,7 +2247,6 @@ function bottomHtml(p) {
         </div>
         <div class="flex items-center gap-x-5 gap-y-1 flex-wrap text-[13px]">
           <span class="text-warmDim">มุมมอง: <span class="${viewColor} font-semibold">${viewArrow} ${viewWord}</span></span>
-          <span class="text-warmDim">อัตราส่วน: <span class="font-mono text-warm">1:${p.rewardRatio}</span></span>
           <span class="text-warmDim">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(p.confidence)}</span></span>
         </div>
 
@@ -2082,7 +2257,7 @@ function bottomHtml(p) {
             ${nearKey(p) ? '<p class="text-[10px] text-gold mt-1 flex items-center gap-1"><span class="live-dot">◀──</span> ปัจจุบัน</p>' : '<p class="text-[10px] text-t3 mt-1">ราคาปัจจุบัน ' + fmtLevel(p.symbol, p.currentPrice) + '</p>'}
           </div>
           <div class="bg-surface2 border border-line rounded-xl p-3">
-            <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">โซนเป้าหมาย</p>
+            <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">${p.view === 'bullish' ? 'แนวต้านสำคัญ' : 'แนวรับสำคัญ'}</p>
             <div class="space-y-1">${zoneRows(p)}</div>
           </div>
           <div class="bg-bearBg border border-bear/50 rounded-xl p-3">
@@ -2092,12 +2267,13 @@ function bottomHtml(p) {
           </div>
         </div>
 
+        ${p.stats && p.stats.length ? `
         <div>
           <p class="text-[12px] text-warmDim mb-2 flex items-center gap-1.5">📈 อัตราความแม่นยำ · ข้อมูลย้อนหลัง 30 วัน</p>
           <div class="bg-bg/30 border border-line rounded-xl p-3 space-y-2">
             ${p.stats.map(statBar).join('')}
           </div>
-        </div>
+        </div>` : ''}
 
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-[12px] text-warmDim border-t border-line pt-3">
           <span>บทวิเคราะห์วันนี้: <span class="text-warm font-mono">${todayCount()}</span> รายการ · สัปดาห์นี้: <span class="text-warm font-mono">${META.weekCount}</span> รายการ</span>
@@ -2413,6 +2589,16 @@ document.querySelectorAll('.conf-btn').forEach(btn => btn.addEventListener('clic
 }));
 document.querySelector('.conf-btn').classList.add('bg-gold','text-bg','border-gold');
 
+/* Timeframe pills (M5/M15/H1/H4/D1) — mirror the conf-btn active treatment. */
+document.querySelectorAll('.tf-pill').forEach(btn => btn.addEventListener('click', () => {
+  state.timeframe = btn.dataset.tf;
+  document.querySelectorAll('.tf-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList(); renderDetail();
+}));
+const tfAll = document.querySelector('.tf-pill[data-tf="all"]');
+if (tfAll) tfAll.classList.add('active');
+
 /* ---------- mobile tabs ---------- */
 const tabList = document.getElementById('tab-list');
 const tabDetail = document.getElementById('tab-detail');
@@ -2593,6 +2779,245 @@ renderList();      // renders the empty state until loadRealFeed resolves
 renderDetail();
 maybeRequestNotify();
 loadRealFeed();    // real analysis_posts only — no demo/simulated content
+</script>
+
+<!-- =====================================================================
+     Room redesign v3 (Pro) — presentation layer additions.
+
+     Pure UI: starfield, count-up, the Featured-analysis card (driven by the
+     SAME real analysis_posts in POSTS), and three mock-data sections
+     (news intelligence / movement alerts / AI auto-push). Phase 2 swaps the
+     mock data for ForexFactory + Finnhub + LINE push without touching layout.
+     All terms here stay within the approved analysis vocabulary.
+     ===================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  const mq = (q) => (typeof window.matchMedia === 'function' ? window.matchMedia(q) : { matches: false });
+  const reduceMotion = mq('(prefers-reduced-motion: reduce)').matches;
+  const isSmall = () => mq('(max-width: 639px)').matches;
+
+  /* ---------- count-up ---------- */
+  function countUp(el, to, ms) {
+    if (!el) return;
+    to = Number(to) || 0;
+    if (reduceMotion) { el.textContent = String(to); return; }
+    const dur = ms || 900, start = performance.now(), from = 0;
+    function step(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = String(Math.round(from + (to - from) * eased));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  document.querySelectorAll('.count-up[data-to]').forEach(el => {
+    if (el.id === 'ai-pushes-today') return; // animated after the widget fills
+    countUp(el, el.dataset.to);
+  });
+
+  /* ---------- starfield (vanilla canvas; desktop/tablet only) ---------- */
+  (function starfield() {
+    const cv = document.getElementById('starfield');
+    if (!cv || isSmall() || reduceMotion) return;
+    let ctx;
+    try { ctx = cv.getContext('2d'); } catch (e) { return; }
+    if (!ctx || typeof requestAnimationFrame !== 'function') return;
+    let w, h, stars = [];
+    function resize() {
+      w = cv.width = window.innerWidth;
+      h = cv.height = window.innerHeight;
+      const n = Math.min(50, Math.round(w * h / 26000));
+      stars = Array.from({ length: n }, () => ({
+        x: Math.random() * w, y: Math.random() * h,
+        r: Math.random() * 1.3 + 0.3,
+        a: Math.random() * 0.3 + 0.3,           // opacity 0.3–0.6
+        vx: (Math.random() - 0.5) * 0.06,        // slow drift
+        vy: (Math.random() - 0.5) * 0.06,
+        tw: Math.random() * Math.PI * 2,
+      }));
+    }
+    function frame() {
+      ctx.clearRect(0, 0, w, h);
+      for (const s of stars) {
+        s.x += s.vx; s.y += s.vy; s.tw += 0.01;
+        if (s.x < 0) s.x = w; if (s.x > w) s.x = 0;
+        if (s.y < 0) s.y = h; if (s.y > h) s.y = 0;
+        const a = s.a * (0.7 + 0.3 * Math.sin(s.tw));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(212,175,55,' + a.toFixed(3) + ')';
+        ctx.fill();
+      }
+      requestAnimationFrame(frame);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(frame);
+  })();
+
+  /* ---------- Featured analysis — latest confirmed, highest confidence ---------- */
+  function pickFeatured() {
+    if (typeof POSTS === 'undefined' || !Array.isArray(POSTS) || !POSTS.length) return null;
+    return POSTS.slice().sort((a, b) =>
+      (b.confidence - a.confidence) || (a.minsAgo - b.minsAgo))[0];
+  }
+  window.renderFeatured = function renderFeatured() {
+    const host = document.getElementById('featured');
+    if (!host) return;
+    const p = pickFeatured();
+    if (!p) {
+      host.innerHTML =
+        '<div class="featured-shell"><div class="featured-inner p-3.5">'
+        + '<div class="skeleton h-3 w-24 mb-3"></div>'
+        + '<div class="skeleton h-24 w-full mb-3"></div>'
+        + '<div class="skeleton h-3 w-2/3 mb-2"></div>'
+        + '<div class="skeleton h-3 w-1/2"></div>'
+        + '</div></div>';
+      return;
+    }
+    const viewWord = p.view === 'bullish' ? 'ขาขึ้น' : 'ขาลง';
+    const viewColor = p.view === 'bullish' ? 'text-gold' : 'text-bear';
+    const arrow = p.view === 'bullish' ? '▲' : '▼';
+    const zoneLabel = p.view === 'bullish' ? 'แนวต้านสำคัญ' : 'แนวรับสำคัญ';
+    const zone = (p.targetZones && p.targetZones[0]) ? fmtLevel(p.symbol, p.targetZones[0].level) : '—';
+    const summary = (p.note && p.note.trim())
+      || ('มุมมอง' + viewWord + ' บน ' + p.symbol + ' กรอบ ' + p.timeframe + ' — ติดตามแนวสำคัญอย่างใกล้ชิด');
+    const thumb = (p.chartImageUrl)
+      ? '<img src="' + p.chartImageUrl + '" alt="ภาพ chart บทวิเคราะห์เด่น" class="w-full h-28 object-cover rounded-lg border border-line" loading="lazy">'
+      : '<div class="w-full h-28 rounded-lg border border-line bg-bg/40 flex items-center justify-center text-t3 text-xs">รอภาพ chart</div>';
+    host.innerHTML =
+      '<div class="featured-shell lift-card">'
+      + '<button type="button" class="featured-inner block w-full text-left p-3.5">'
+      +   '<div class="flex items-center justify-between mb-2">'
+      +     '<span class="section-head"><svg class="w-3.5 h-3.5 text-gold" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3L22 9.3l-5 4.7 1.3 7L12 17.8 5.7 21l1.3-7-5-4.7 7.1-1z"/></svg>บทวิเคราะห์เด่น</span>'
+      +     '<span class="inline-flex items-center gap-1 text-ok text-[10px] font-semibold"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>ยืนยันแล้ว</span>'
+      +   '</div>'
+      +   thumb
+      +   '<div class="flex items-center justify-between mt-2.5">'
+      +     '<span class="font-mono text-sm font-semibold text-warm">' + p.symbol + ' <span class="text-[10px] text-t3 font-sans">' + p.timeframe + '</span></span>'
+      +     '<span class="text-gold text-[11px] tracking-wider">' + stars(p.confidence) + '</span>'
+      +   '</div>'
+      +   '<p class="text-[11px] ' + viewColor + ' font-semibold mt-1">' + arrow + ' มุมมอง' + viewWord + '</p>'
+      +   '<p class="text-[11px] text-t2 leading-relaxed mt-1.5"><span class="text-goldSoft">AURUM AI วิเคราะห์:</span> ' + summary + '</p>'
+      +   '<div class="grid grid-cols-2 gap-2 mt-2.5">'
+      +     '<div class="bg-goldBg border border-goldDim rounded-lg px-2.5 py-1.5"><p class="text-[9px] text-t3 uppercase tracking-wider">จุดสำคัญ</p><p class="font-mono text-sm text-gold">' + fmtLevel(p.symbol, p.keyLevel) + '</p></div>'
+      +     '<div class="bg-surface2 border border-line rounded-lg px-2.5 py-1.5"><p class="text-[9px] text-t3 uppercase tracking-wider">' + zoneLabel + '</p><p class="font-mono text-sm text-warm">' + zone + '</p></div>'
+      +   '</div>'
+      + '</button></div>';
+    const btn = host.querySelector('button');
+    if (btn) btn.addEventListener('click', () => selectPost(p.id));
+  };
+  // First paint (POSTS likely empty → skeleton); renderList() re-invokes on load.
+  renderFeatured();
+
+  /* ===================================================================
+     MOCK DATA — Phase 1 only. Phase 2 replaces with live ForexFactory +
+     Finnhub feeds, an AI relevance filter and the real LINE push status.
+     =================================================================== */
+  const NEWS = [
+    { id: 'n1', title: 'Fed Rate Decision', impact: 'high',   time: 'วันนี้ 22:00', source: 'forexfactory', expected: '5.50%',  previous: '5.50%' },
+    { id: 'n2', title: 'US CPI YoY',          impact: 'medium', time: 'วันนี้ 20:30', source: 'forexfactory', expected: '3.1%',   previous: '3.4%'  },
+    { id: 'n3', title: 'ECB Lagarde Speech',  impact: 'medium', time: 'วันนี้ 18:00', source: 'finnhub' },
+    { id: 'n4', title: 'ดุลการค้ายูโรโซน',     impact: 'low',    time: 'วันนี้ 16:00', source: 'forexfactory', expected: '€23.5B', previous: '€21.0B' },
+    { id: 'n5', title: 'US Jobless Claims',   impact: 'medium', time: 'วันนี้ 19:30', source: 'forexfactory', expected: '220K',   previous: '218K'  },
+    { id: 'n6', title: 'JPY Intervention Watch', impact: 'high', time: 'ทั้งวัน',      source: 'finnhub' },
+  ];
+  const MOVES = [
+    { id: 'm1', asset: 'XAUUSD', magnitude: '+50.0 จุด',     window: '5 นาที',  dir: 'up',   minsAgo: 2 },
+    { id: 'm2', asset: 'XAUUSD', magnitude: 'ปริมาณ +180%',  window: '15 นาที', dir: 'up',   minsAgo: 8 },
+    { id: 'm3', asset: 'EURUSD', magnitude: '-30.0 จุด',     window: '10 นาที', dir: 'down', minsAgo: 21 },
+    { id: 'm4', asset: 'USDJPY', magnitude: 'สูงสุดรอบ 7 วัน', window: 'วันนี้',  dir: 'up',   minsAgo: 47 },
+  ];
+  const AI_PUSH = { active: true, lastPushAt: new Date(Date.now() - 2 * 60000).toISOString(), pushesToday: 12 };
+
+  const IMPACT = {
+    high:   { cls: 'impact-high',   th: 'สูง' },
+    medium: { cls: 'impact-medium', th: 'กลาง' },
+    low:    { cls: 'impact-low',    th: 'ต่ำ' },
+  };
+  function srcLabel(s) { return s === 'finnhub' ? 'Finnhub' : 'ForexFactory'; }
+
+  function skeletonCards(n) {
+    let out = '';
+    for (let i = 0; i < n; i++) {
+      out += '<div class="bg-surface border border-line rounded-xl p-3 mb-2">'
+        + '<div class="skeleton h-3 w-1/3 mb-2"></div>'
+        + '<div class="skeleton h-3 w-2/3"></div></div>';
+    }
+    return out;
+  }
+
+  function renderNews() {
+    const host = document.getElementById('news-section');
+    if (!host) return;
+    const cards = NEWS.map(n => {
+      const im = IMPACT[n.impact] || IMPACT.low;
+      const ev = (n.expected || n.previous)
+        ? '<div class="flex items-center gap-4 mt-1.5 text-[10px] font-mono text-t2">'
+          + (n.expected ? '<span>คาดการณ์ <span class="text-warm">' + n.expected + '</span></span>' : '')
+          + (n.previous ? '<span>ครั้งก่อน <span class="text-warm">' + n.previous + '</span></span>' : '')
+          + '</div>'
+        : '';
+      return '<div class="lift-card bg-surface border border-line rounded-xl p-3 mb-2">'
+        + '<div class="flex items-center justify-between gap-2">'
+        +   '<span class="text-[13px] text-warm font-medium">' + n.title + '</span>'
+        +   '<span class="impact-badge ' + im.cls + '">' + im.th + '</span>'
+        + '</div>'
+        + '<div class="flex items-center justify-between mt-1 text-[10px] text-t3">'
+        +   '<span class="font-mono">⏱ ' + n.time + '</span>'
+        +   '<span>via ' + srcLabel(n.source) + '</span>'
+        + '</div>' + ev
+        + '</div>';
+    }).join('');
+    host.innerHTML =
+      '<div class="section-head mb-2.5"><svg class="w-3.5 h-3.5 text-gold" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h9l5 5v9a2 2 0 01-2 2z"/></svg>'
+      + '<span>ข่าวสำคัญ · AI กรองแล้ว</span><span class="section-rule"></span>'
+      + '<span class="text-t3 text-[10px] normal-case tracking-normal">via ForexFactory + Finnhub</span></div>'
+      + cards;
+  }
+
+  function renderMoves() {
+    const host = document.getElementById('movement-section');
+    if (!host) return;
+    const cards = MOVES.map(m => {
+      const up = m.dir === 'up';
+      const color = up ? 'text-success2' : 'text-danger2';
+      const arrow = up ? '▲' : '▼';
+      return '<div class="lift-card bg-surface border border-line rounded-xl p-3 mb-2 flex items-center justify-between gap-3">'
+        + '<div class="min-w-0">'
+        +   '<p class="font-mono text-sm text-warm">' + m.asset + '</p>'
+        +   '<p class="text-[10px] text-t3 mt-0.5">ภายใน ' + m.window + ' · ' + formatAge(new Date(Date.now() - m.minsAgo * 60000).toISOString()) + '</p>'
+        + '</div>'
+        + '<span class="' + color + ' font-mono font-semibold text-sm whitespace-nowrap">' + arrow + ' ' + m.magnitude + '</span>'
+        + '</div>';
+    }).join('');
+    host.innerHTML =
+      '<div class="section-head mb-2.5"><svg class="w-3.5 h-3.5 text-gold" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>'
+      + '<span>เคลื่อนไหวสำคัญ</span><span class="section-rule"></span></div>'
+      + cards;
+  }
+
+  /* ---------- AI auto-push widget ---------- */
+  function renderAIPush() {
+    const last = document.getElementById('ai-last-push');
+    const today = document.getElementById('ai-pushes-today');
+    if (last) last.textContent = AI_PUSH.active ? formatAge(AI_PUSH.lastPushAt) : 'หยุดชั่วคราว';
+    if (today) countUp(today, AI_PUSH.pushesToday);
+  }
+  const aiToggle = document.getElementById('ai-push-toggle');
+  if (aiToggle) aiToggle.addEventListener('click', () => {
+    document.getElementById('ai-push-widget').classList.toggle('collapsed');
+  });
+
+  /* Skeleton-then-fill to show the shimmer loading states (and the count-up). */
+  const newsHost = document.getElementById('news-section');
+  const moveHost = document.getElementById('movement-section');
+  if (newsHost) newsHost.innerHTML = '<div class="section-head mb-2.5"><span>ข่าวสำคัญ · AI กรองแล้ว</span><span class="section-rule"></span></div>' + skeletonCards(3);
+  if (moveHost) moveHost.innerHTML = '<div class="section-head mb-2.5"><span>เคลื่อนไหวสำคัญ</span><span class="section-rule"></span></div>' + skeletonCards(2);
+  setTimeout(() => { renderNews(); renderMoves(); renderAIPush(); }, reduceMotion ? 0 : 650);
+})();
 </script>
 
 <!-- =====================================================================
