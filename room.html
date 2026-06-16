@@ -403,6 +403,21 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   border: 1px solid #8b7029;
   color: #e7c66e;
 }
+/* AI-briefing live chart — TradingView public embed (iframe). No external API.
+   16/9 on desktop, 4/3 on mobile; min-height prevents collapse while loading;
+   a subtle gold skeleton shows behind the iframe until the widget paints. */
+.chart-inline-iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 320px;
+  border: 0;
+  border-radius: var(--card-radius, 12px);
+  background: rgba(212, 175, 55, 0.05);
+}
+@media (max-width: 640px) {
+  .chart-inline-iframe { aspect-ratio: 4 / 3; }
+}
 
 /* =====================================================================
    Phase C Step 3 — TradingView username welcome popup + grant banner.
@@ -1870,7 +1885,7 @@ function buildDetailShell() {
   detailEl.innerHTML = `
     <div class="fade-in">
       <div id="d-top"></div>
-      <div class="mb-4">
+      <div id="chart-pane" class="mb-4">
         <div class="relative">
           <!-- Inline chart-img.com PNG (TradingView shared layout uoSX32t7).
                Shown immediately when the post carries chart_image_url; click
@@ -1880,8 +1895,13 @@ function buildDetailShell() {
                feed query), so this only shows in the rare null case. -->
           <div id="chart-empty" class="hidden w-full h-[320px] sm:h-[480px] rounded-xl border border-line items-center justify-center text-sm text-t3">รอข้อมูลแท่งเทียน</div>
           <span id="inline-chart-hint" class="chart-inline-hint hidden">🔍 คลิกเพื่อขยาย</span>
+          <!-- AI-scheduled briefings: live TradingView public embed (XAUUSD).
+               src is set lazily in renderInlineChart only when shown. -->
+          <iframe id="inline-chart-tv" class="chart-inline-iframe hidden"
+                  title="TradingView XAUUSD live chart"
+                  loading="lazy" allowtransparency="true" allow="fullscreen"></iframe>
         </div>
-        <p class="text-[10px] text-t3 mt-1 text-right">ภาพจาก TradingView</p>
+        <p id="inline-chart-caption" class="text-[10px] text-t3 mt-1 text-right">ภาพจาก TradingView</p>
       </div>
       <div id="d-bottom"></div>
     </div>`;
@@ -2420,11 +2440,46 @@ function handleChartImageUpdate(row) {
    already bakes in every indicator from the TradingView shared layout, so there
    is no candle/overlay computation here. Posts without an image are filtered out
    of the feed, but the empty fallback is kept for safety. */
+// TradingView public embed (widgetembed) for an AI-briefing's live chart.
+// Symbol maps to the OANDA feed (briefings are XAUUSD); M15, dark, BKK tz.
+function tvWidgetUrl(symbol) {
+  const params = new URLSearchParams({
+    symbol: 'OANDA:' + (symbol || 'XAUUSD'),
+    interval: '15', theme: 'dark', style: '1', timezone: 'Asia/Bangkok',
+    hidesidetoolbar: '1', saveimage: '0', details: '0', hotlist: '0',
+    calendar: '0', watchlist: '0', locale: 'en',
+  });
+  return 'https://s.tradingview.com/widgetembed/?' + params.toString();
+}
+
 function renderInlineChart(p) {
+  const pane  = document.getElementById('chart-pane');
   const img   = document.getElementById('inline-chart-img');
   const empty = document.getElementById('chart-empty');
   const hint  = document.getElementById('inline-chart-hint');
+  const tv    = document.getElementById('inline-chart-tv');
+  const caption = document.getElementById('inline-chart-caption');
   if (!img) return;
+  // The chart pane is always visible; its contents switch on source.
+  if (pane) pane.classList.remove('hidden');
+  // AI-scheduled briefings have no chart_image_url by design — show a live
+  // TradingView embed (iframe) instead of the Pine chart image.
+  if (p.source === 'ai_scheduled') {
+    img.classList.add('hidden'); img.removeAttribute('src');
+    if (hint) hint.classList.add('hidden');
+    if (empty) { empty.classList.add('hidden'); empty.classList.remove('flex'); }
+    if (tv) {
+      const want = tvWidgetUrl(p.symbol);
+      if (tv.getAttribute('src') !== want) tv.src = want; // lazy: only set when shown
+      tv.classList.remove('hidden');
+    }
+    if (caption) caption.textContent = 'ภาพจาก TradingView · live chart';
+    return;
+  }
+  // Pine-webhook posts: hide the iframe (drop its src so it doesn't load while
+  // hidden) and render the chart image exactly as before.
+  if (tv) { tv.classList.add('hidden'); tv.removeAttribute('src'); }
+  if (caption) caption.textContent = 'ภาพจาก TradingView';
   if (hasChartImage(p)) {
     if (img.getAttribute('src') !== p.chartImageUrl) img.src = p.chartImageUrl;
     img.classList.remove('hidden');

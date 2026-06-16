@@ -192,6 +192,11 @@ function listRowIds(document) {
       assert.ok(!img.classList.contains('hidden'), 'inline image must be visible');
       assert.strictEqual(img.getAttribute('src'), 'https://img.test/p1.png');
       assert.ok(img.classList.contains('chart-inline-img'));
+      const pane = document.getElementById('chart-pane');
+      assert.ok(pane && !pane.classList.contains('hidden'), 'chart pane visible for a Pine post');
+      // The AI-briefing iframe must stay hidden for a Pine post.
+      assert.ok(document.getElementById('inline-chart-tv').classList.contains('hidden'),
+        'TradingView iframe must be hidden for a Pine post');
     });
     test('Lightweight Charts container is NOT rendered', () => {
       assert.strictEqual(document.getElementById('chart-container'), null);
@@ -250,6 +255,30 @@ function listRowIds(document) {
       const ids = listRowIds(document);
       assert.ok(ids.includes('a2'), 'evening briefing should be added live without a chart image');
       assert.strictEqual(ids[0], 'a2', 'newest briefing should be at the top');
+    });
+
+    // Run last in this block — selecting a1 changes the detail view away from p1.
+    test('selecting an ai_scheduled briefing shows the chart pane with a TradingView iframe', () => {
+      const win = document.defaultView;
+      // jsdom has no matchMedia; selectPost touches it on the mobile-tab path.
+      win.matchMedia = win.matchMedia || (() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+      document.getElementById('row-a1').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+      const pane = document.getElementById('chart-pane');
+      assert.ok(pane && !pane.classList.contains('hidden'), 'chart pane must be VISIBLE for ai_scheduled');
+      const tv = document.getElementById('inline-chart-tv');
+      assert.ok(tv && !tv.classList.contains('hidden'), 'TradingView iframe must be shown');
+      assert.ok(
+        (tv.getAttribute('src') || '').startsWith('https://s.tradingview.com/widgetembed/'),
+        'iframe src must be the TradingView widget embed'
+      );
+      assert.ok(
+        document.getElementById('inline-chart-img').classList.contains('hidden'),
+        'the Pine chart image must be hidden for a briefing'
+      );
+      assert.ok(
+        document.getElementById('d-bottom').textContent.includes('ภาพรวมตลาด'),
+        'briefing note content should render in the detail body'
+      );
     });
   }
 
