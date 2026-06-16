@@ -8,10 +8,15 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Beauty pass: GSAP (entrance/scroll), Lucide (sidebar icons). Loaded best-effort;
+     all init code guards window.gsap / window.lucide so the page works without them. -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.469.0/lucide.min.js"></script>
 <script>
 tailwind.config = {
   theme: {
@@ -31,15 +36,21 @@ tailwind.config = {
         ok: '#22c55e',
         okBg: '#0d2417',
         warn: '#f5c451',
+        cyan: '#4fc3d9',
+        success2: '#0fbf6a',
+        danger2: '#e24b4a',
+        warning2: '#ef9f27',
         warm: '#f5e8c7',
         warmDim: '#c9b896',
         t2: '#a99fc4',
         t3: '#7a6f99',
       },
       fontFamily: {
-        sans: ['"IBM Plex Sans Thai"', 'system-ui', 'sans-serif'],
+        sans: ['"IBM Plex Sans Thai"', 'Inter', 'system-ui', 'sans-serif'],
+        body: ['Inter', '"IBM Plex Sans Thai"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
         serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        display: ['"Instrument Serif"', '"Cormorant Garamond"', '"IBM Plex Sans Thai"', 'serif'],
       }
     }
   }
@@ -901,10 +912,327 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   .rtab-faq { padding: 8px 11px; }
   .rtab-faq summary { min-height: 44px; }
 }
+
+/* =====================================================================
+   Room redesign v3 (Pro) — refined dark-luxury design system.
+   Brand: gold #d4af37 · cyan LIVE accent #4fc3d9. All effects are
+   subtle/premium — no thick shadows, neon, glitch or fast pulses.
+   ===================================================================== */
+
+/* Starfield canvas — fixed behind the app shell, slow drift, dim. */
+#starfield {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none; opacity: 0.2;
+}
+.h-screen.flex.flex-col { position: relative; z-index: 1; }
+
+/* Live indicator — 2s breathing pulse (replaces the 1.5s .live-dot for
+   the always-on "ออนไลน์"/LIVE markers). */
+@keyframes pulse2 { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.pulse-2s { animation: pulse2 2s ease-in-out infinite; }
+.live-ring {
+  position: relative;
+}
+.live-ring::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 999px;
+  border: 1px solid rgba(79,195,217,0.5); animation: liveRing 2s ease-out infinite;
+}
+@keyframes liveRing {
+  0% { transform: scale(0.8); opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Card hover — lift 2px + gold glow border, 200ms. */
+.lift-card { transition: transform .2s cubic-bezier(.4,0,.2,1), border-color .2s, box-shadow .2s; }
+.lift-card:hover {
+  transform: translateY(-2px);
+  border-color: #8b7029;
+  box-shadow: 0 0 0 1px rgba(212,175,55,0.18), 0 10px 26px -16px rgba(212,175,55,0.5);
+}
+
+/* Skeleton shimmer loading state. */
+.skeleton {
+  position: relative; overflow: hidden; background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: ''; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* Conic-gradient border on the featured card. */
+.featured-shell {
+  position: relative; border-radius: 18px; padding: 1px;
+  background: conic-gradient(from 140deg, rgba(212,175,55,0.55), rgba(79,195,217,0.18), rgba(212,175,55,0.05), rgba(212,175,55,0.55));
+}
+.featured-inner {
+  border-radius: 17px;
+  background: linear-gradient(165deg, rgba(36,26,13,0.55), rgba(22,10,46,0.85));
+}
+
+/* Filter pills (timeframe / confidence) — 200ms transitions. */
+.tf-pill, .conf-btn {
+  transition: background .2s cubic-bezier(.4,0,.2,1), color .2s, border-color .2s;
+}
+.tf-pill.active { background: #d4af37; color: #0a0420; border-color: #d4af37; font-weight: 600; }
+
+/* Section headers for the new dashboard sections. */
+.section-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #e7c66e; font-weight: 600;
+}
+.section-rule { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(212,175,55,0.25), transparent); }
+
+/* Impact badges (news intelligence). */
+.impact-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: 999px; text-transform: uppercase;
+}
+.impact-high   { background: rgba(226,75,74,0.14);  color: #f08b8a; border: 1px solid rgba(226,75,74,0.4); }
+.impact-medium { background: rgba(239,159,39,0.14); color: #f3c178; border: 1px solid rgba(239,159,39,0.4); }
+.impact-low    { background: rgba(79,195,217,0.12); color: #8fd6e6; border: 1px solid rgba(79,195,217,0.35); }
+
+/* AI auto-push floating widget — bottom corner, blurred glass. */
+#ai-push-widget {
+  position: fixed; right: 16px; bottom: 16px; z-index: 55;
+  width: 280px; max-width: calc(100vw - 32px);
+  background: rgba(16,8,32,0.82); backdrop-filter: blur(14px);
+  border: 1px solid #2c1a4a; border-radius: 16px; padding: 13px 14px;
+  box-shadow: 0 18px 40px -22px rgba(0,0,0,0.9);
+  transform: translateY(8px); opacity: 0;
+  animation: aiIn .5s ease-out .4s forwards;
+  transition: border-color .2s, box-shadow .2s;
+}
+#ai-push-widget:hover { border-color: #3a6f7a; box-shadow: 0 0 0 1px rgba(79,195,217,0.18), 0 18px 40px -20px rgba(0,0,0,0.9); }
+@keyframes aiIn { to { transform: translateY(0); opacity: 1; } }
+#ai-push-widget.collapsed { width: auto; }
+#ai-push-widget .ai-body { transition: opacity .2s; }
+#ai-push-widget.collapsed .ai-body { display: none; }
+@media (max-width: 639px) {
+  #ai-push-widget { right: 10px; bottom: 10px; width: 220px; padding: 10px 12px; }
+}
+
+/* Count-up numbers should not reflow as digits change. */
+.count-up { font-variant-numeric: tabular-nums; }
+
+/* Reduce motion / mobile — calm everything down. */
+@media (max-width: 639px) {
+  #starfield { display: none; }
+  .lift-card:hover { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #starfield { display: none; }
+  .pulse-2s, .live-ring::after, .skeleton::after, #ai-push-widget { animation: none; }
+  .lift-card { transition: none; }
+}
+
+/* =====================================================================
+   BEAUTY PASS v2 — sidebar dashboard, cinematic hero, image-led cards,
+   loading screen. Builds on the v1 design system above.
+   ===================================================================== */
+.font-display { font-family: 'Instrument Serif','Cormorant Garamond','IBM Plex Sans Thai',serif; }
+
+/* Keep functional-but-hidden nodes interactive (proxied by the sidebar). */
+.func-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---- App shell ---- */
+#app-shell { position: relative; z-index: 1; display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
+
+/* ---- Sidebar ---- */
+.sidebar {
+  flex-shrink: 0; width: 240px; height: 100%;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 20px 14px;
+  background: rgba(15,8,32,0.74); backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(212,175,55,0.1);
+  z-index: 40;
+}
+.side-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 2px; }
+.side-logo-mark { width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(145deg, #241a0d, #160a2e); border: 1px solid #8b7029; color: #d4af37; }
+.side-logo-mark svg { width: 18px; height: 18px; }
+.side-logo-text { display: flex; flex-direction: column; line-height: 1; }
+.side-logo-name { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 20px; color: #d4af37; }
+.side-logo-sub { font-size: 9px; letter-spacing: 0.34em; color: #7a6f99; margin-top: 2px; }
+.side-online { font-size: 10px; color: #a99fc4; display: flex; align-items: center; gap: 5px; padding: 6px 10px 14px; border-bottom: 1px solid rgba(212,175,55,0.08); margin-bottom: 8px; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+.side-item {
+  position: relative; display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; border-radius: 11px; width: 100%; text-align: left;
+  font-size: 13px; color: #a99fc4; overflow: hidden;
+  transition: color .2s, background .2s;
+}
+.side-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(212,175,55,0.1); transition: width .2s cubic-bezier(.4,0,.2,1); z-index: -1; }
+.side-item:hover { color: #f5e8c7; }
+.side-item:hover::before { width: 100%; }
+.side-item.active { color: #d4af37; background: rgba(212,175,55,0.1); box-shadow: inset 2px 0 0 #d4af37; }
+.side-ic, .side-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.side-user { display: flex; align-items: center; gap: 10px; padding: 10px 8px 2px; border-top: 1px solid rgba(212,175,55,0.08); margin-top: 6px; }
+.side-avatar { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(140deg,#d4af37,#8b7029); color: #0a0518; font-weight: 700; font-size: 14px; }
+.side-user-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.side-email { font-size: 11px; color: #c9b896; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; display: block; }
+.side-logout { font-size: 11px; }
+#sidebar-backdrop { display: none; }
+
+/* ---- Main column + top bar ---- */
+.main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
+.topbar {
+  flex-shrink: 0; height: 64px; display: flex; align-items: center; gap: 14px;
+  padding: 0 18px 0 24px; border-bottom: 1px solid rgba(212,175,55,0.1);
+  background: rgba(10,5,24,0.72); backdrop-filter: blur(14px);
+}
+.topbar-burger { display: none; color: #c9b896; }
+.topbar-burger svg { width: 22px; height: 22px; }
+.topbar-search { flex: 1; max-width: 420px; display: flex; align-items: center; gap: 8px;
+  background: rgba(22,10,46,0.8); border: 1px solid #2c1a4a; border-radius: 999px; padding: 8px 14px; transition: border-color .2s; }
+.topbar-search:focus-within { border-color: #8b7029; }
+.topbar-search-ic { width: 15px; height: 15px; color: #7a6f99; flex-shrink: 0; }
+.topbar-search input { flex: 1; background: transparent; border: 0; outline: none; color: #f5e8c7; font-size: 13px; }
+.topbar-search input::placeholder { color: #7a6f99; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.topbar-expiry { display: flex; align-items: center; gap: 8px; background: #241a0d; border: 1px solid #8b7029; border-radius: 10px; padding: 6px 12px; }
+.topbar-renew { font-size: 11px; color: #d4af37; text-decoration: underline; white-space: nowrap; }
+.topbar-renew:hover { color: #e7c66e; }
+.topbar-icon-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid #2c1a4a; background: rgba(22,10,46,0.6); color: #c9b896; display: inline-flex; align-items: center; justify-content: center; transition: color .2s, border-color .2s; }
+.topbar-icon-btn:hover { color: #d4af37; border-color: #8b7029; }
+.topbar-icon-btn svg { width: 17px; height: 17px; }
+.topbar-avatar { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(140deg,#d4af37,#8b7029); color: #0a0518; font-weight: 700; font-size: 14px; }
+
+/* ---- Content ---- */
+.content { flex: 1; min-height: 0; overflow-y: auto; padding: 32px; }
+.content > #room-panel:not(.open) { display: none; }
+.dash-section { margin-top: 34px; }
+.sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+.sec-title { font-size: 22px; font-weight: 500; color: #f5e8c7; text-shadow: 0 2px 18px rgba(5,2,12,0.7); }
+.sec-count { font-size: 12px; color: #7a6f99; }
+
+/* ---- Filter / category bar ---- */
+.filterbar { display: flex; flex-direction: column; gap: 14px; margin-bottom: 26px; }
+.cat-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.cat-pill { padding: 8px 18px; border-radius: 999px; font-size: 13px; color: #a99fc4; border: 1px solid #2c1a4a; background: rgba(22,10,46,0.5);
+  transition: background .2s cubic-bezier(.4,0,.2,1), color .2s, border-color .2s; }
+.cat-pill:hover { color: #f5e8c7; border-color: #8b7029; }
+.cat-pill.active { background: #d4af37; color: #0a0518; border-color: #d4af37; font-weight: 600; }
+.filter-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.tf-pill, .conf-btn { padding: 5px 12px; border-radius: 999px; font-size: 11px; color: #a99fc4; border: 1px solid #2c1a4a; background: rgba(22,10,46,0.4);
+  transition: background .2s cubic-bezier(.4,0,.2,1), color .2s, border-color .2s; }
+.tf-pill:hover, .conf-btn:hover { color: #f5e8c7; border-color: #8b7029; }
+.tf-pill.active, .conf-btn.active { background: #d4af37; color: #0a0518; border-color: #d4af37; font-weight: 600; }
+.filter-selects { display: flex; gap: 8px; margin-left: auto; }
+.mini-select { background: rgba(22,10,46,0.6); border: 1px solid #2c1a4a; border-radius: 999px; color: #c9b896; font-size: 11px; padding: 6px 26px 6px 12px; outline: none; }
+.mini-select:focus { border-color: #8b7029; }
+
+/* ---- HERO featured (cinematic) ---- */
+.hero { position: relative; width: 100%; aspect-ratio: 21/9; border-radius: 24px; overflow: hidden; border: 1px solid rgba(212,175,55,0.18); background: #0a0518; cursor: pointer; }
+.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s cubic-bezier(.4,0,.2,1); }
+.hero:hover .hero-bg { transform: scale(1.04); }
+.hero-fallback { position: absolute; inset: 0; background: radial-gradient(120% 120% at 15% 90%, #1a0d3a 0%, #0a0518 70%), linear-gradient(135deg, rgba(212,175,55,0.25), transparent 60%); display: flex; align-items: center; justify-content: center; }
+.hero-fallback svg { width: 64px; height: 64px; color: rgba(212,175,55,0.25); }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,5,24,0.96) 0%, rgba(10,5,24,0.55) 48%, rgba(10,5,24,0.05) 100%); }
+.hero-content { position: absolute; left: 0; bottom: 0; max-width: 640px; padding: 36px 40px; }
+.hero-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em; color: #d4af37; margin-bottom: 12px; }
+.hero-title { font-family: 'Instrument Serif',serif; font-style: italic; font-weight: 400; color: #fff; font-size: clamp(34px, 5.5vw, 76px); line-height: 1.02; text-shadow: 0 4px 30px rgba(5,2,12,0.8), 0 1px 4px rgba(5,2,12,0.6); }
+.hero-desc { color: rgba(255,255,255,0.72); font-size: 15px; line-height: 1.6; margin-top: 14px; max-width: 520px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hero-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; padding: 11px 22px; border-radius: 999px; font-size: 14px; color: #f5e8c7;
+  background: rgba(10,5,24,0.5); border: 1px solid transparent; background-image: linear-gradient(rgba(10,5,24,0.6),rgba(10,5,24,0.6)), linear-gradient(120deg,#d4af37,#4fc3d9); background-origin: border-box; background-clip: padding-box, border-box; transition: transform .2s, box-shadow .2s; }
+.hero-cta:hover { transform: scale(1.04); box-shadow: 0 0 24px rgba(212,175,55,0.3); }
+.hero-badge { position: absolute; top: 18px; right: 18px; display: flex; align-items: center; gap: 8px; }
+.hero-stars { color: #d4af37; font-size: 14px; letter-spacing: 1px; }
+.hero-conf-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: rgba(15,191,106,0.16); border: 1px solid rgba(15,191,106,0.4); color: #5fe0a0; }
+
+/* ---- Image-led cards ---- */
+.card-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
+.ac { position: relative; border-radius: 22px; overflow: hidden; border: 0.5px solid rgba(212,175,55,0.15); background: rgba(15,8,32,0.65); backdrop-filter: blur(12px); text-align: left; width: 100%;
+  transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s, border-color .3s; }
+.ac:hover { transform: translateY(-4px); border-color: rgba(212,175,55,0.45); box-shadow: 0 18px 40px -20px rgba(212,175,55,0.4); }
+.ac-imgwrap { position: relative; aspect-ratio: 4/3; overflow: hidden; background: #0a0518; }
+.ac-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .35s cubic-bezier(.4,0,.2,1); }
+.ac:hover .ac-img { transform: scale(1.05); }
+.ac-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(120% 120% at 30% 20%, #241a0d 0%, #1a0d3a 55%, #0a0518 100%); }
+.ac-fallback svg { width: 40px; height: 40px; color: rgba(212,175,55,0.3); }
+.ac-halftone { position: absolute; inset: 0; background-image: radial-gradient(circle, #000 1px, transparent 1px); background-size: 4px 4px; opacity: 0.15; pointer-events: none; }
+.ac-hover { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; background: rgba(10,5,24,0.7); backdrop-filter: blur(8px); transition: opacity .3s; }
+.ac:hover .ac-hover { opacity: 1; }
+.ac-hover-label { font-family: 'Instrument Serif',serif; font-style: italic; font-size: 17px; color: #f5e8c7; padding: 9px 18px; border-radius: 999px;
+  border: 1px solid transparent; background-image: linear-gradient(rgba(10,5,24,0.7),rgba(10,5,24,0.7)), linear-gradient(120deg,#d4af37,#4fc3d9); background-origin: border-box; background-clip: padding-box, border-box; }
+.ac-body { padding: 16px 18px; }
+.ac-badges { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; flex-wrap: wrap; }
+.ac-tag { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(212,175,55,0.12); color: #e7c66e; border: 1px solid rgba(212,175,55,0.3); }
+.ac-tf { font-size: 10px; color: #7a6f99; font-family: 'JetBrains Mono',monospace; padding: 2px 7px; border-radius: 6px; border: 1px solid #2c1a4a; }
+.ac-title { font-family: 'Instrument Serif',serif; font-style: italic; font-size: 19px; color: #f5e8c7; line-height: 1.2; }
+.ac-meta { display: flex; align-items: center; gap: 9px; margin-top: 9px; font-size: 11px; color: #a99fc4; flex-wrap: wrap; }
+.ac-stars { color: #d4af37; letter-spacing: 0.5px; }
+
+/* ---- Detail drawer ---- */
+.detail-drawer {
+  position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 92vw); z-index: 70;
+  background: linear-gradient(180deg,#0f0820,#0a0518); border-left: 1px solid rgba(212,175,55,0.18);
+  box-shadow: -30px 0 60px -30px rgba(0,0,0,0.8);
+  transform: translateX(100%); transition: transform .35s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto; display: flex; flex-direction: column;
+}
+.detail-drawer.open { transform: translateX(0); }
+.detail-close { position: sticky; top: 10px; align-self: flex-end; margin: 10px 14px -34px auto; z-index: 2;
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid #2c1a4a; background: rgba(10,5,24,0.7); color: #c9b896; font-size: 22px; line-height: 1; }
+.detail-close:hover { color: #d4af37; border-color: #8b7029; }
+#detail-backdrop { position: fixed; inset: 0; z-index: 65; background: rgba(5,2,12,0.6); backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .3s; }
+#detail-backdrop.show { opacity: 1; pointer-events: auto; }
+
+/* ---- Loading screen ---- */
+#loader { position: fixed; inset: 0; z-index: 9999; background: #0a0518; transition: opacity .5s ease; }
+#loader.hide { opacity: 0; pointer-events: none; }
+.loader-tag { position: absolute; top: 28px; left: 32px; font-size: 11px; letter-spacing: 0.3em; color: #d4af37; text-transform: uppercase; }
+.loader-word-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); height: 1.2em; overflow: hidden; }
+.loader-word { display: block; font-family: 'Instrument Serif',serif; font-style: italic; font-size: clamp(40px, 9vw, 88px); color: #f5e8c7; }
+.loader-count { position: absolute; right: 32px; bottom: 40px; font-family: 'JetBrains Mono',monospace; font-size: clamp(56px,12vw,120px); font-weight: 700; color: #d4af37; font-variant-numeric: tabular-nums; line-height: 1; }
+.loader-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(212,175,55,0.1); }
+#loader-bar-fill { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg,#8b7029,#d4af37,#e7c66e); box-shadow: 0 0 8px rgba(212,175,55,0.35); }
+
+/* ---- Responsive ---- */
+@media (max-width: 1023px) {
+  .card-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 640px) {
+  #aurum-bg-video { display: none; }
+  .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .3s cubic-bezier(.4,0,.2,1); }
+  #app-shell.nav-open .sidebar { transform: translateX(0); }
+  #app-shell.nav-open #sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(5,2,12,0.6); }
+  .topbar-burger { display: inline-flex; }
+  .topbar-expiry { display: none; }
+  .content { padding: 16px; }
+  .card-grid { grid-template-columns: 1fr; }
+  .hero { aspect-ratio: 16/9; }
+  .hero-content { padding: 20px 22px; }
+  .detail-drawer { width: 100vw; }
+  .sec-title { font-size: 19px; }
+}
 </style>
 </head>
 
 <body class="text-warm font-sans antialiased">
+<!-- Atmospheric background video (desktop/tablet; paused on reduced-motion, hidden on mobile) -->
+<video id="aurum-bg-video"
+       autoplay muted loop playsinline preload="auto"
+       aria-hidden="true"
+       style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;opacity:0.55">
+  <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260514_102933_4e8f73b5-775a-4179-b2fb-472f59063dcd.mp4" type="video/mp4">
+</video>
+<div id="aurum-bg-overlay"
+     style="position:fixed;inset:0;z-index:-1;pointer-events:none;
+            background:
+              radial-gradient(ellipse at center, transparent 0%, rgba(10,5,24,0.6) 100%),
+              linear-gradient(180deg, rgba(10,5,24,0.35) 0%, rgba(10,5,24,0.75) 100%);">
+</div>
+<!-- Subtle drifting starfield (desktop/tablet only; vanilla canvas) -->
+<canvas id="starfield" aria-hidden="true"></canvas>
 
 <!-- =====================================================================
      Access gate (Option A) — runs before the room renders.
@@ -1205,137 +1533,215 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 })();
 </script>
 
-<!-- ============ VARIANT C — Pro Dashboard (Phase 2.5 · on-chart overlays) ============ -->
+<!-- ============ Beauty pass v2 — Sidebar dashboard (cinematic) ============ -->
 
-<div class="h-screen flex flex-col max-w-7xl mx-auto">
+<!-- Loading screen (counter 000→100). Removed by the init script on finish. -->
+<div id="loader" aria-hidden="true">
+  <span class="loader-tag">AURUM</span>
+  <div class="loader-word-wrap"><span id="loader-word" class="loader-word">วิเคราะห์</span></div>
+  <div class="loader-count"><span id="loader-num">000</span></div>
+  <div class="loader-bar"><span id="loader-bar-fill"></span></div>
+</div>
 
-  <!-- Top bar -->
-  <header class="flex-shrink-0 border-b border-line bg-bg/70 backdrop-blur-md px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3">
-    <div class="flex items-center gap-3 min-w-0">
-      <div class="w-9 h-9 rounded-xl bg-goldBg flex items-center justify-center border border-goldDim flex-shrink-0">
-        <svg class="w-5 h-5 text-gold" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/></svg>
-      </div>
-      <div class="min-w-0">
-        <h1 class="serif-h text-gold text-xl leading-none font-semibold truncate">AURUM ANALYSIS</h1>
-        <p class="text-[11px] text-t2 flex items-center gap-1.5 mt-0.5">
-          <span class="inline-block w-1.5 h-1.5 rounded-full live-dot" style="background:#22c55e"></span>
-          247 members · <span class="text-goldSoft">12 ออนไลน์</span>
-        </p>
-      </div>
+<div id="app-shell" class="app-shell">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside id="sidebar" class="sidebar" aria-label="เมนูหลัก">
+    <div class="side-logo">
+      <span class="side-logo-mark">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4.09 12.97L11 14L9 22L20 9.43L13.04 9L13 2Z"/></svg>
+      </span>
+      <span class="side-logo-text">
+        <span class="side-logo-name">AURUM</span>
+        <span class="side-logo-sub">ANALYSIS</span>
+      </span>
     </div>
-    <div class="flex items-center gap-2">
-      <!-- Logged-in user email — small, dim, gold-tinted (hidden on mobile) -->
-      <span id="room-user-email" class="logout-user-email hidden sm:inline-block"></span>
-      <!-- Sound toggle -->
-      <button id="sound-toggle" title="เสียงแจ้งเตือน" class="w-9 h-9 rounded-lg border border-line bg-surface flex items-center justify-center text-warmDim hover:text-gold hover:border-goldDim transition">
-        <svg id="sound-on-icon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 00-2.5-4.03v8.05A4.5 4.5 0 0016.5 12zM14 3.23v2.06a7 7 0 010 13.42v2.06A9 9 0 0014 3.23z"/></svg>
-        <svg id="sound-off-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.59 2L19 9.41 17.59 8 15 10.59 12.41 8 11 9.41 13.59 12 11 14.59 12.41 16 15 13.41 17.59 16 19 14.59 16.41 12z"/></svg>
-      </button>
-      <!-- Expiry banner — keep IDs for renderExpiry() -->
-      <div class="flex items-center gap-2 text-sm bg-goldBg border border-goldDim rounded-lg px-3 py-1.5">
-        <svg class="w-4 h-4 text-goldSoft flex-shrink-0 hidden sm:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <span class="text-goldSoft text-xs">
-          เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span>
-          <span id="room-expiry-date" class="text-t3 text-xs hidden md:inline">· หมดอายุ —</span>
-        </span>
-        <button class="text-xs text-gold underline hover:text-goldSoft whitespace-nowrap ml-1">ต่ออายุ</button>
-      </div>
-      <!-- Logout — outline gold button, opens the confirm modal -->
-      <button id="logout-btn" type="button" class="logout-btn" title="ออกจากระบบ">
-        <svg class="logout-icon w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-        </svg>
-        <span class="logout-spinner"></span>
-        <span class="logout-label">ออกจากระบบ</span>
-      </button>
-    </div>
-  </header>
+    <p class="side-online">
+      <span class="inline-block w-1.5 h-1.5 rounded-full pulse-2s" style="background:#0fbf6a"></span>
+      <span id="online-count" class="count-up" data-to="12">12</span> ออนไลน์ ·
+      <span id="member-count" class="count-up" data-to="247">247</span> สมาชิก
+    </p>
 
-  <!-- Room menu bar — TradingView Username (functional) + two placeholder panels -->
-  <nav id="room-menu" class="flex-shrink-0 border-b border-line bg-bg/50 px-3 sm:px-5 py-2 overflow-x-auto" aria-label="เมนูห้อง">
-    <div class="flex items-center gap-2 min-w-max">
+    <nav class="side-nav" aria-label="นำทาง">
+      <button type="button" class="side-item active" data-nav="dashboard"><i data-lucide="line-chart" class="side-ic"></i><span>แดชบอร์ด</span></button>
+      <button type="button" class="side-item" data-nav="analysis"><i data-lucide="area-chart" class="side-ic"></i><span>บทวิเคราะห์ทั้งหมด</span></button>
+      <button type="button" class="side-item" data-nav="news"><i data-lucide="newspaper" class="side-ic"></i><span>ข่าวสำคัญ AI</span></button>
+      <button type="button" class="side-item" data-nav="movement"><i data-lucide="zap" class="side-ic"></i><span>เคลื่อนไหวสำคัญ</span></button>
+      <button type="button" class="side-item" data-pill="tv"><i data-lucide="external-link" class="side-ic"></i><span>TradingView Live</span></button>
+      <button type="button" class="side-item" data-pill="usage"><i data-lucide="user-circle" class="side-ic"></i><span>บัญชีของฉัน</span></button>
+      <button type="button" class="side-item" data-pill="howto"><i data-lucide="help-circle" class="side-ic"></i><span>วิธีการใช้งาน</span></button>
+    </nav>
+
+    <div class="side-user">
+      <span class="side-avatar" aria-hidden="true">A</span>
+      <span class="side-user-meta">
+        <span id="room-user-email" class="logout-user-email side-email"></span>
+        <button id="logout-btn" type="button" class="logout-btn side-logout" title="ออกจากระบบ">
+          <svg class="logout-icon w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          <span class="logout-spinner"></span>
+          <span class="logout-label">ออกจากระบบ</span>
+        </button>
+      </span>
+    </div>
+  </aside>
+  <div id="sidebar-backdrop"></div>
+
+  <!-- ===================== MAIN COLUMN ===================== -->
+  <div class="main-col">
+
+    <!-- Top bar 64px -->
+    <header class="topbar">
+      <button id="hamburger" type="button" class="topbar-burger" aria-label="เปิดเมนู">
+        <i data-lucide="menu"></i>
+      </button>
+      <label class="topbar-search">
+        <i data-lucide="search" class="topbar-search-ic"></i>
+        <input type="text" placeholder="ค้นหาบทวิเคราะห์ · สินทรัพย์…" aria-label="ค้นหา">
+      </label>
+      <div class="topbar-actions">
+        <div class="topbar-expiry">
+          <svg class="w-4 h-4 text-goldSoft flex-shrink-0 hidden sm:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="text-goldSoft text-xs">เหลือ <span id="room-expiry-days" class="font-mono font-semibold text-gold">— วัน</span><span id="room-expiry-date" class="text-t3 text-xs hidden md:inline">· หมดอายุ —</span></span>
+          <button class="topbar-renew">ต่ออายุ</button>
+        </div>
+        <button id="sound-toggle" title="เสียงแจ้งเตือน" class="topbar-icon-btn">
+          <svg id="sound-on-icon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 00-2.5-4.03v8.05A4.5 4.5 0 0016.5 12zM14 3.23v2.06a7 7 0 010 13.42v2.06A9 9 0 0014 3.23z"/></svg>
+          <svg id="sound-off-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3zm13.59 2L19 9.41 17.59 8 15 10.59 12.41 8 11 9.41 13.59 12 11 14.59 12.41 16 15 13.41 17.59 16 19 14.59 16.41 12z"/></svg>
+        </button>
+        <button class="topbar-icon-btn" title="การแจ้งเตือน" aria-label="การแจ้งเตือน"><i data-lucide="bell"></i></button>
+        <span class="topbar-avatar" aria-hidden="true">A</span>
+      </div>
+    </header>
+
+    <!-- Functional room menu (proxied by the sidebar) — kept for the TV/howto/usage panels -->
+    <nav id="room-menu" class="func-hidden" aria-label="เมนูห้อง">
       <button type="button" class="room-menu-pill" data-panel="tv" aria-pressed="false">TradingView Username</button>
       <button type="button" class="room-menu-pill" data-panel="usage" aria-pressed="false">ข้อมูลการใช้งาน</button>
       <button type="button" class="room-menu-pill" data-panel="howto" aria-pressed="false">วิธีการใช้งาน</button>
+    </nav>
+    <!-- Hidden mobile-tab elements (logic kept; UI replaced by the detail drawer) -->
+    <div class="func-hidden">
+      <button id="tab-list">รายการ <span id="tab-unread" class="hidden">0</span></button>
+      <button id="tab-detail">รายละเอียด</button>
     </div>
-  </nav>
 
-  <!-- Slide-in panel for the active menu item (populated by the room-menu module) -->
-  <div id="room-panel" class="flex-shrink-0" role="region" aria-live="polite"></div>
+    <!-- Scrollable content -->
+    <main id="content" class="content" role="main">
 
-  <!-- Phase C Step 3 — Aurum Gold grant-state banner (populated by the TV module) -->
-  <div id="tv-banner" class="flex-shrink-0" role="status" aria-live="polite"></div>
-
-  <!-- Welcome enhancement — awaiting-username reminder banner. Stays in the
-       inline flow (sits hidden behind the popup overlay until the popup is
-       dismissed); the TV module toggles `.show` based on tv_grant_status. -->
-  <div id="tv-await-banner" class="flex-shrink-0" role="status" aria-live="polite">
-    <div class="tv-await-inner">
-      <span class="tv-await-text">⚠️ ยังไม่ได้กรอก <strong>TradingView Username</strong> — เพื่อรับสิทธิ์ Aurum Gold Indicator</span>
-      <button id="tv-await-cta" type="button" class="tv-await-btn">กรอกตอนนี้ →</button>
-    </div>
-  </div>
-
-  <!-- Mobile tabs -->
-  <div class="md:hidden flex-shrink-0 flex border-b border-line bg-bg/60">
-    <button id="tab-list" class="flex-1 py-2.5 text-sm font-medium text-gold border-b-2 border-gold relative">
-      รายการ <span id="tab-unread" class="hidden absolute top-1.5 ml-1 text-[9px] bg-gold text-bg font-bold px-1.5 rounded-full">0</span>
-    </button>
-    <button id="tab-detail" class="flex-1 py-2.5 text-sm font-medium text-warmDim border-b-2 border-transparent">รายละเอียด</button>
-  </div>
-
-  <!-- Split pane -->
-  <div class="flex-1 min-h-0 flex">
-
-    <!-- LEFT: list (35%) -->
-    <aside id="pane-list" class="w-full md:w-[35%] md:max-w-sm flex flex-col border-r border-line min-h-0">
-      <!-- Filter bar -->
-      <div class="flex-shrink-0 p-3 border-b border-line space-y-2">
-        <div class="flex gap-2">
-          <select id="f-symbol" class="flex-1 bg-surface border border-line rounded-lg text-xs text-warm pl-3 pr-7 py-2 outline-none focus:border-goldDim">
-            <option value="all">ทุกสินทรัพย์</option>
-            <option value="XAUUSD">XAUUSD</option>
-            <option value="EURUSD">EURUSD</option>
-            <option value="BTCUSD">BTCUSD</option>
-          </select>
-          <select id="f-sort" class="flex-1 bg-surface border border-line rounded-lg text-xs text-warm pl-3 pr-7 py-2 outline-none focus:border-goldDim">
-            <option value="new">ใหม่สุดก่อน</option>
-            <option value="old">เก่าสุดก่อน</option>
-          </select>
+      <!-- Active menu panel (TV / howto / usage) renders here -->
+      <div id="room-panel" role="region" aria-live="polite"></div>
+      <!-- Grant-state banner + awaiting-username reminder -->
+      <div id="tv-banner" role="status" aria-live="polite"></div>
+      <div id="tv-await-banner" role="status" aria-live="polite">
+        <div class="tv-await-inner">
+          <span class="tv-await-text">⚠️ ยังไม่ได้กรอก <strong>TradingView Username</strong> — เพื่อรับสิทธิ์ Aurum Gold Indicator</span>
+          <button id="tv-await-cta" type="button" class="tv-await-btn">กรอกตอนนี้ →</button>
         </div>
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-1.5 text-[11px] text-warmDim">
-            <span class="mr-0.5">ความเชื่อมั่น</span>
-            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="0">ทั้งหมด</button>
-            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="3">3★+</button>
-            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="4">4★+</button>
-            <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="5">5★</button>
+      </div>
+
+      <!-- Category + filter bar -->
+      <div id="filterbar" class="filterbar">
+        <div class="cat-row">
+          <button class="cat-pill active" data-cat="all">ทั้งหมด</button>
+          <button class="cat-pill" data-cat="analysis">บทวิเคราะห์</button>
+          <button class="cat-pill" data-cat="news">ข่าวสำคัญ</button>
+          <button class="cat-pill" data-cat="movement">เคลื่อนไหวสำคัญ</button>
+          <button class="cat-pill" data-cat="five">5★ เท่านั้น</button>
+        </div>
+        <div class="filter-sub">
+          <div class="pill-group" aria-label="กรอบเวลา">
+            <button class="tf-pill" data-tf="all">ทั้งหมด</button>
+            <button class="tf-pill font-mono" data-tf="M5">M5</button>
+            <button class="tf-pill font-mono" data-tf="M15">M15</button>
+            <button class="tf-pill font-mono" data-tf="H1">H1</button>
+            <button class="tf-pill font-mono" data-tf="H4">H4</button>
+            <button class="tf-pill font-mono" data-tf="D1">D1</button>
+          </div>
+          <div class="pill-group" aria-label="ความเชื่อมั่น">
+            <button class="conf-btn" data-conf="0">ทั้งหมด</button>
+            <button class="conf-btn" data-conf="3">3★+</button>
+            <button class="conf-btn" data-conf="4">4★+</button>
+            <button class="conf-btn" data-conf="5">5★</button>
+          </div>
+          <div class="filter-selects">
+            <select id="f-symbol" class="mini-select">
+              <option value="all">ทุกสินทรัพย์</option>
+              <option value="XAUUSD">XAUUSD</option>
+              <option value="EURUSD">EURUSD</option>
+              <option value="USDJPY">USDJPY</option>
+              <option value="BTCUSD">BTCUSD</option>
+              <option value="NAS100">NAS100</option>
+            </select>
+            <select id="f-sort" class="mini-select">
+              <option value="new">ใหม่สุดก่อน</option>
+              <option value="old">เก่าสุดก่อน</option>
+            </select>
           </div>
         </div>
       </div>
-      <!-- List -->
-      <div id="list" class="flex-1 min-h-0 overflow-y-auto scroll-y p-2 space-y-1.5"></div>
-    </aside>
 
-    <!-- RIGHT: detail (65%) -->
-    <section id="pane-detail" class="hidden md:flex flex-1 min-h-0 flex-col overflow-y-auto scroll-y">
-      <div id="detail" class="p-4 sm:p-5"></div>
-      <!-- Chart lock state — shown while a username is still required (toggled by the TV module) -->
-      <div id="tv-lock" role="region" aria-label="TradingView Indicator ยังไม่ปลดล็อค">
-        <div class="tv-lock-badge" aria-hidden="true">🔒</div>
-        <h3 class="tv-lock-h">TradingView Indicator ยังไม่ปลดล็อค</h3>
-        <p class="tv-lock-sub">กรอก TradingView Username เพื่อรับสิทธิ์ใช้งาน Aurum Gold Indicator (invite-only)</p>
-        <button id="tv-lock-cta" type="button" class="tv-lock-btn">กรอก Username</button>
-      </div>
-    </section>
+      <!-- HERO featured (cinematic) -->
+      <div id="featured" class="hero-host"></div>
 
+      <!-- Analysis grid -->
+      <section id="pane-list" class="dash-section" data-section="analysis">
+        <div class="sec-head">
+          <h2 class="sec-title">บทวิเคราะห์ทั้งหมด</h2>
+          <span id="timeline-count" class="sec-count font-mono"></span>
+        </div>
+        <div id="list" class="card-grid"></div>
+      </section>
+
+      <!-- News intelligence -->
+      <section class="dash-section" data-section="news">
+        <div id="news-section"></div>
+      </section>
+
+      <!-- Movement alerts -->
+      <section class="dash-section" data-section="movement">
+        <div id="movement-section"></div>
+      </section>
+    </main>
   </div>
+
+  <!-- ===================== DETAIL DRAWER ===================== -->
+  <aside id="pane-detail" class="detail-drawer" role="dialog" aria-modal="true" aria-label="รายละเอียดบทวิเคราะห์">
+    <button id="detail-close" type="button" class="detail-close" aria-label="ปิด">&times;</button>
+    <div id="detail" class="p-4 sm:p-5"></div>
+    <div id="tv-lock" role="region" aria-label="TradingView Indicator ยังไม่ปลดล็อค">
+      <div class="tv-lock-badge" aria-hidden="true">🔒</div>
+      <h3 class="tv-lock-h">TradingView Indicator ยังไม่ปลดล็อค</h3>
+      <p class="tv-lock-sub">กรอก TradingView Username เพื่อรับสิทธิ์ใช้งาน Aurum Gold Indicator (invite-only)</p>
+      <button id="tv-lock-cta" type="button" class="tv-lock-btn">กรอก Username</button>
+    </div>
+  </aside>
+  <div id="detail-backdrop"></div>
 </div>
 
 <!-- Toast container -->
 <div id="toast-wrap" aria-live="polite"></div>
+
+<!-- AURUM AI auto-push floating widget (status mock in Phase 1) -->
+<div id="ai-push-widget" role="status" aria-live="polite">
+  <div class="flex items-center gap-2.5">
+    <span class="live-ring flex-shrink-0 inline-flex">
+      <span class="w-2.5 h-2.5 rounded-full pulse-2s" style="background:#4fc3d9;box-shadow:0 0 8px rgba(79,195,217,0.8)"></span>
+    </span>
+    <div class="min-w-0 flex-1">
+      <p class="text-[11px] font-semibold text-warm leading-tight">AURUM AI</p>
+      <p class="text-[10px] text-cyan leading-tight">● ส่งข่าวลง LINE Group อัตโนมัติ</p>
+    </div>
+    <button id="ai-push-toggle" type="button" class="text-t3 hover:text-warm w-6 h-6 flex items-center justify-center rounded-md" aria-label="ย่อ/ขยาย" title="ย่อ/ขยาย">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+    </button>
+  </div>
+  <div class="ai-body mt-2.5 pt-2.5 border-t border-line flex items-center justify-between text-[10px]">
+    <span class="text-t2">ส่งล่าสุด <span id="ai-last-push" class="text-warmDim font-mono">—</span></span>
+    <span class="text-t2">วันนี้ <span id="ai-pushes-today" class="count-up text-cyan font-mono font-semibold" data-to="12">0</span> ครั้ง</span>
+  </div>
+</div>
 
 <!-- =====================================================================
      Phase C Step 3 — TradingView username welcome popup.
@@ -1453,7 +1859,7 @@ const PRICE_FMT = {
 let POSTS = [];
 function getById(id) { return POSTS.find(p => p.id === id); }
 
-const state = { symbol: 'all', sort: 'new', conf: 0, selected: null };
+const state = { symbol: 'all', timeframe: 'all', sort: 'new', conf: 0, selected: null };
 
 /* Deep link: when opened from Telegram with ?post_id=..., applyDeepLink() pins
    the detail to that authoritative analysis_posts row and auto-opens the
@@ -1502,7 +1908,10 @@ const listEl = document.getElementById('list');
 const detailEl = document.getElementById('detail');
 
 function visibleList() {
-  let list = POSTS.filter(p => (state.symbol === 'all' || p.symbol === state.symbol) && p.confidence >= state.conf);
+  let list = POSTS.filter(p =>
+    (state.symbol === 'all' || p.symbol === state.symbol) &&
+    (state.timeframe === 'all' || p.timeframe === state.timeframe) &&
+    p.confidence >= state.conf);
   list.sort((a, b) => state.sort === 'new' ? a.minsAgo - b.minsAgo : b.minsAgo - a.minsAgo);
   return list;
 }
@@ -1523,29 +1932,37 @@ function renderList() {
     const active = p.id === state.selected;
     const el = document.createElement('button');
     el.id = 'row-' + p.id;
-    el.className = 'list-item relative w-full text-left bg-surface border border-line rounded-xl p-3 flex flex-col gap-1.5'
-      + (active ? ' active' : '') + (p.isNew ? ' row-new' : '');
+    el.type = 'button';
+    el.className = 'ac' + (active ? ' active' : '') + (p.isNew ? ' row-new' : '');
+    const viewWord = p.view === 'bullish' ? 'ขาขึ้น' : 'ขาลง';
     el.innerHTML = `
-      <span class="item-bar absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gold"></span>
-      <div class="flex items-center justify-between">
-        <span class="font-mono text-sm font-semibold text-warm flex items-center gap-1.5">${p.symbol}
-          <span class="text-[10px] text-t3 font-sans">${p.timeframe}</span>
-          ${p.unread ? '<span class="text-[9px] bg-gold text-bg font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>' : ''}
-        </span>
-        <span class="text-[10px] text-t3 font-mono">${ageLabel(p)}</span>
+      <div class="ac-imgwrap">
+        <div class="ac-fallback"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></div>
+        <img class="ac-img" src="${p.chartImageUrl || ''}" alt="ภาพ chart ${p.symbol}" loading="lazy" onerror="this.style.display='none'">
+        <div class="ac-halftone"></div>
+        <div class="ac-hover"><span class="ac-hover-label">ดูบทวิเคราะห์ — ${p.symbol}</span></div>
       </div>
-      <div class="flex items-center justify-between">
-        ${viewTagSm(p.view)}
-        <span class="text-gold text-[11px] tracking-wider">${stars(p.confidence)}</span>
-      </div>
-      <div class="flex items-center justify-between">
-        ${statusChipSm(p)}
-        <span class="text-[10px] text-t3 font-mono">อัตราส่วน 1:${p.rewardRatio}</span>
+      <div class="ac-body">
+        <div class="ac-badges">
+          <span class="ac-tag">บทวิเคราะห์</span>
+          <span class="ac-tf">${p.timeframe}</span>
+          ${p.unread ? '<span class="ac-tag" style="background:rgba(79,195,217,.14);color:#8fd6e6;border-color:rgba(79,195,217,.35)">ใหม่</span>' : ''}
+        </div>
+        <p class="ac-title">${p.symbol} · มุมมอง${viewWord}</p>
+        <div class="ac-meta">
+          <span class="ac-stars">${stars(p.confidence)}</span>
+          <span>${ageLabel(p)}</span>
+          ${statusChipSm(p)}
+        </div>
       </div>`;
     el.addEventListener('click', () => selectPost(p.id));
     listEl.appendChild(el);
   });
   updateUnreadBadge();
+  const tlCount = document.getElementById('timeline-count');
+  if (tlCount) tlCount.textContent = list.length + ' รายการ';
+  if (typeof renderFeatured === 'function') renderFeatured();
+  if (typeof afterListRender === 'function') afterListRender();
 }
 
 function selectPost(id) {
@@ -1554,7 +1971,7 @@ function selectPost(id) {
   state.selected = id;
   renderList();
   renderDetail();
-  if (window.matchMedia('(max-width: 767px)').matches) activateTab('detail');
+  if (typeof openDetailDrawer === 'function') openDetailDrawer();
 }
 
 /* =====================================================================
@@ -2071,7 +2488,6 @@ function bottomHtml(p) {
         </div>
         <div class="flex items-center gap-x-5 gap-y-1 flex-wrap text-[13px]">
           <span class="text-warmDim">มุมมอง: <span class="${viewColor} font-semibold">${viewArrow} ${viewWord}</span></span>
-          <span class="text-warmDim">อัตราส่วน: <span class="font-mono text-warm">1:${p.rewardRatio}</span></span>
           <span class="text-warmDim">ความเชื่อมั่น <span class="text-gold tracking-wider">${stars(p.confidence)}</span></span>
         </div>
 
@@ -2082,7 +2498,7 @@ function bottomHtml(p) {
             ${nearKey(p) ? '<p class="text-[10px] text-gold mt-1 flex items-center gap-1"><span class="live-dot">◀──</span> ปัจจุบัน</p>' : '<p class="text-[10px] text-t3 mt-1">ราคาปัจจุบัน ' + fmtLevel(p.symbol, p.currentPrice) + '</p>'}
           </div>
           <div class="bg-surface2 border border-line rounded-xl p-3">
-            <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">โซนเป้าหมาย</p>
+            <p class="text-[10px] text-t3 uppercase tracking-wider mb-1.5">${p.view === 'bullish' ? 'แนวต้านสำคัญ' : 'แนวรับสำคัญ'}</p>
             <div class="space-y-1">${zoneRows(p)}</div>
           </div>
           <div class="bg-bearBg border border-bear/50 rounded-xl p-3">
@@ -2092,12 +2508,13 @@ function bottomHtml(p) {
           </div>
         </div>
 
+        ${p.stats && p.stats.length ? `
         <div>
           <p class="text-[12px] text-warmDim mb-2 flex items-center gap-1.5">📈 อัตราความแม่นยำ · ข้อมูลย้อนหลัง 30 วัน</p>
           <div class="bg-bg/30 border border-line rounded-xl p-3 space-y-2">
             ${p.stats.map(statBar).join('')}
           </div>
-        </div>
+        </div>` : ''}
 
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-[12px] text-warmDim border-t border-line pt-3">
           <span>บทวิเคราะห์วันนี้: <span class="text-warm font-mono">${todayCount()}</span> รายการ · สัปดาห์นี้: <span class="text-warm font-mono">${META.weekCount}</span> รายการ</span>
@@ -2413,30 +2830,30 @@ document.querySelectorAll('.conf-btn').forEach(btn => btn.addEventListener('clic
 }));
 document.querySelector('.conf-btn').classList.add('bg-gold','text-bg','border-gold');
 
+/* Timeframe pills (M5/M15/H1/H4/D1) — mirror the conf-btn active treatment. */
+document.querySelectorAll('.tf-pill').forEach(btn => btn.addEventListener('click', () => {
+  state.timeframe = btn.dataset.tf;
+  document.querySelectorAll('.tf-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList(); renderDetail();
+}));
+const tfAll = document.querySelector('.tf-pill[data-tf="all"]');
+if (tfAll) tfAll.classList.add('active');
+
 /* ---------- mobile tabs ---------- */
 const tabList = document.getElementById('tab-list');
 const tabDetail = document.getElementById('tab-detail');
 const paneList = document.getElementById('pane-list');
 const paneDetail = document.getElementById('pane-detail');
+/* Beauty pass: the split-pane tabs are replaced by a slide-in detail drawer.
+   activateTab is kept as the single hook so existing callers still work:
+   'detail' opens the drawer, 'list' closes it. */
 function activateTab(which) {
-  const showList = which === 'list';
-  paneList.classList.toggle('hidden', !showList);
-  paneList.classList.toggle('flex', showList);
-  paneDetail.classList.toggle('hidden', showList);
-  paneDetail.classList.toggle('flex', !showList);
-  tabList.classList.toggle('text-gold', showList);
-  tabList.classList.toggle('border-gold', showList);
-  tabList.classList.toggle('text-warmDim', !showList);
-  tabList.classList.toggle('border-transparent', !showList);
-  tabDetail.classList.toggle('text-gold', !showList);
-  tabDetail.classList.toggle('border-gold', !showList);
-  tabDetail.classList.toggle('text-warmDim', showList);
-  tabDetail.classList.toggle('border-transparent', showList);
-  // Resize/refit the chart once the detail pane becomes visible (was 0-width while hidden).
-  if (!showList && chart) requestAnimationFrame(() => chart.timeScale().fitContent());
+  if (which === 'list') { if (typeof closeDetailDrawer === 'function') closeDetailDrawer(); }
+  else { if (typeof openDetailDrawer === 'function') openDetailDrawer(); }
 }
-tabList.addEventListener('click', () => activateTab('list'));
-tabDetail.addEventListener('click', () => activateTab('detail'));
+if (tabList) tabList.addEventListener('click', () => activateTab('list'));
+if (tabDetail) tabDetail.addEventListener('click', () => activateTab('detail'));
 
 /* =====================================================================
    REAL FEED — analysis_posts (Supabase, project etwlurpjrqlvrxgsbhkd).
@@ -2593,6 +3010,392 @@ renderList();      // renders the empty state until loadRealFeed resolves
 renderDetail();
 maybeRequestNotify();
 loadRealFeed();    // real analysis_posts only — no demo/simulated content
+</script>
+
+<!-- =====================================================================
+     Room redesign v3 (Pro) — presentation layer additions.
+
+     Pure UI: starfield, count-up, the Featured-analysis card (driven by the
+     SAME real analysis_posts in POSTS), and three mock-data sections
+     (news intelligence / movement alerts / AI auto-push). Phase 2 swaps the
+     mock data for ForexFactory + Finnhub + LINE push without touching layout.
+     All terms here stay within the approved analysis vocabulary.
+     ===================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  const mq = (q) => (typeof window.matchMedia === 'function' ? window.matchMedia(q) : { matches: false });
+  const reduceMotion = mq('(prefers-reduced-motion: reduce)').matches;
+  const isSmall = () => mq('(max-width: 639px)').matches;
+
+  /* ---------- count-up ---------- */
+  function countUp(el, to, ms) {
+    if (!el) return;
+    to = Number(to) || 0;
+    if (reduceMotion) { el.textContent = String(to); return; }
+    const dur = ms || 900, start = performance.now(), from = 0;
+    function step(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = String(Math.round(from + (to - from) * eased));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  document.querySelectorAll('.count-up[data-to]').forEach(el => {
+    if (el.id === 'ai-pushes-today') return; // animated after the widget fills
+    countUp(el, el.dataset.to);
+  });
+
+  /* ---------- starfield (vanilla canvas; desktop/tablet only) ---------- */
+  (function starfield() {
+    const cv = document.getElementById('starfield');
+    if (!cv || isSmall() || reduceMotion) return;
+    let ctx;
+    try { ctx = cv.getContext('2d'); } catch (e) { return; }
+    if (!ctx || typeof requestAnimationFrame !== 'function') return;
+    let w, h, stars = [];
+    function resize() {
+      w = cv.width = window.innerWidth;
+      h = cv.height = window.innerHeight;
+      const n = Math.min(50, Math.round(w * h / 26000));
+      stars = Array.from({ length: n }, () => ({
+        x: Math.random() * w, y: Math.random() * h,
+        r: Math.random() * 1.3 + 0.3,
+        a: Math.random() * 0.3 + 0.3,           // opacity 0.3–0.6
+        vx: (Math.random() - 0.5) * 0.06,        // slow drift
+        vy: (Math.random() - 0.5) * 0.06,
+        tw: Math.random() * Math.PI * 2,
+      }));
+    }
+    function frame() {
+      ctx.clearRect(0, 0, w, h);
+      for (const s of stars) {
+        s.x += s.vx; s.y += s.vy; s.tw += 0.01;
+        if (s.x < 0) s.x = w; if (s.x > w) s.x = 0;
+        if (s.y < 0) s.y = h; if (s.y > h) s.y = 0;
+        const a = s.a * (0.7 + 0.3 * Math.sin(s.tw));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(212,175,55,' + a.toFixed(3) + ')';
+        ctx.fill();
+      }
+      requestAnimationFrame(frame);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(frame);
+  })();
+
+  /* ---------- Featured analysis — latest confirmed, highest confidence ---------- */
+  function pickFeatured() {
+    if (typeof POSTS === 'undefined' || !Array.isArray(POSTS) || !POSTS.length) return null;
+    return POSTS.slice().sort((a, b) =>
+      (b.confidence - a.confidence) || (a.minsAgo - b.minsAgo))[0];
+  }
+  const CLOUD = 'https://res.cloudinary.com/dtobmxcdk/image/upload/';
+  const CHART_ICON = '<svg fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg>';
+
+  window.renderFeatured = function renderFeatured() {
+    const host = document.getElementById('featured');
+    if (!host) return;
+    const p = pickFeatured();
+    if (!p) {
+      host.innerHTML =
+        '<div class="hero"><div class="hero-fallback">' + CHART_ICON + '</div><div class="hero-overlay"></div>'
+        + '<div class="hero-content"><div class="skeleton h-3 w-32 mb-4"></div><div class="skeleton h-14 w-72 mb-4"></div><div class="skeleton h-3 w-96"></div></div></div>';
+      return;
+    }
+    const viewWord = p.view === 'bullish' ? 'ขาขึ้น' : 'ขาลง';
+    const summary = (p.note && p.note.trim())
+      || ('มุมมอง' + viewWord + ' บน ' + p.symbol + ' กรอบ ' + p.timeframe + ' — ติดตามแนวรับ/แนวต้านสำคัญอย่างใกล้ชิด');
+    const bg = p.chartImageUrl || (CLOUD + 'aurum-hero/placeholder-1.jpg');
+    host.innerHTML =
+      '<div class="hero" id="hero-card" role="button" tabindex="0">'
+      + '<div class="hero-fallback">' + CHART_ICON + '</div>'
+      + '<img class="hero-bg" src="' + bg + '" alt="ภาพ chart บทวิเคราะห์เด่น" onerror="this.style.display=\'none\'">'
+      + '<div class="hero-overlay"></div>'
+      + '<div class="hero-badge"><span class="hero-stars">' + stars(p.confidence) + '</span><span class="hero-conf-pill"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>ยืนยันแล้ว</span></div>'
+      + '<div class="hero-content">'
+      +   '<p class="hero-eyebrow">บทวิเคราะห์เด่น · ' + p.timeframe + '</p>'
+      +   '<h2 class="hero-title">' + p.symbol + ' · มุมมอง' + viewWord + '</h2>'
+      +   '<p class="hero-desc"><span style="color:#e7c66e">AURUM AI วิเคราะห์:</span> ' + summary + '</p>'
+      +   '<span class="hero-cta">ดูบทวิเคราะห์เต็ม →</span>'
+      + '</div>'
+      + '</div>';
+    const card = document.getElementById('hero-card');
+    if (card) {
+      card.addEventListener('click', () => selectPost(p.id));
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPost(p.id); } });
+      if (window.gsap && !reduceMotion) window.gsap.fromTo(card, { opacity: 0, y: 30, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 1.2, ease: 'power3.out' });
+    }
+  };
+  // First paint (POSTS likely empty → skeleton); renderList() re-invokes on load.
+  renderFeatured();
+
+  /* ===================================================================
+     MOCK DATA — Phase 1 only. Phase 2 replaces with live ForexFactory +
+     Finnhub feeds, an AI relevance filter and the real LINE push status.
+     =================================================================== */
+  const NEWS = [
+    { id: 'n1', title: 'Fed Rate Decision', impact: 'high',   time: 'วันนี้ 22:00', source: 'forexfactory', expected: '5.50%',  previous: '5.50%', img: 'fed' },
+    { id: 'n2', title: 'US CPI YoY',          impact: 'medium', time: 'วันนี้ 20:30', source: 'forexfactory', expected: '3.1%',   previous: '3.4%',  img: 'cpi' },
+    { id: 'n3', title: 'ECB Lagarde Speech',  impact: 'medium', time: 'วันนี้ 18:00', source: 'finnhub', img: 'ecb' },
+    { id: 'n4', title: 'ดุลการค้ายูโรโซน',     impact: 'low',    time: 'วันนี้ 16:00', source: 'forexfactory', expected: '€23.5B', previous: '€21.0B', img: 'eu-balance' },
+    { id: 'n5', title: 'US Jobless Claims',   impact: 'medium', time: 'วันนี้ 19:30', source: 'forexfactory', expected: '220K',   previous: '218K',  img: 'jobless' },
+    { id: 'n6', title: 'JPY Intervention Watch', impact: 'high', time: 'ทั้งวัน',      source: 'finnhub', img: 'jpy' },
+  ];
+  const MOVES = [
+    { id: 'm1', asset: 'XAUUSD', magnitude: '+50.0 จุด',     window: '5 นาที',  dir: 'up',   minsAgo: 2,  img: 'xauusd-spike' },
+    { id: 'm2', asset: 'XAUUSD', magnitude: 'ปริมาณ +180%',  window: '15 นาที', dir: 'up',   minsAgo: 8,  img: 'volume-surge' },
+    { id: 'm3', asset: 'EURUSD', magnitude: '-30.0 จุด',     window: '10 นาที', dir: 'down', minsAgo: 21, img: 'eurusd-drop' },
+    { id: 'm4', asset: 'USDJPY', magnitude: 'สูงสุดรอบ 7 วัน', window: 'วันนี้',  dir: 'up',   minsAgo: 47, img: 'usdjpy-high' },
+  ];
+  const AI_PUSH = { active: true, lastPushAt: new Date(Date.now() - 2 * 60000).toISOString(), pushesToday: 12 };
+
+  const IMPACT = {
+    high:   { cls: 'impact-high',   th: 'สูง' },
+    medium: { cls: 'impact-medium', th: 'กลาง' },
+    low:    { cls: 'impact-low',    th: 'ต่ำ' },
+  };
+  function srcLabel(s) { return s === 'finnhub' ? 'Finnhub' : 'ForexFactory'; }
+
+  function secHead(label, note) {
+    return '<div class="sec-head"><h2 class="sec-title">' + label + '</h2>'
+      + (note ? '<span class="sec-count">' + note + '</span>' : '') + '</div>';
+  }
+  function skeletonCards(n) {
+    let out = '';
+    for (let i = 0; i < n; i++) {
+      out += '<div class="ac"><div class="ac-imgwrap skeleton"></div>'
+        + '<div class="ac-body"><div class="skeleton h-3 w-1/3 mb-2"></div>'
+        + '<div class="skeleton h-4 w-2/3 mb-2"></div><div class="skeleton h-3 w-1/2"></div></div></div>';
+    }
+    return '<div class="card-grid">' + out + '</div>';
+  }
+
+  function renderNews() {
+    const host = document.getElementById('news-section');
+    if (!host) return;
+    const cards = NEWS.map(n => {
+      const im = IMPACT[n.impact] || IMPACT.low;
+      const ev = (n.expected || n.previous)
+        ? '<div class="ac-meta" style="margin-top:7px">'
+          + (n.expected ? '<span>คาดการณ์ <span class="text-warm font-mono">' + n.expected + '</span></span>' : '')
+          + (n.previous ? '<span>ครั้งก่อน <span class="text-warm font-mono">' + n.previous + '</span></span>' : '')
+          + '</div>'
+        : '';
+      return '<div class="ac">'
+        + '<div class="ac-imgwrap"><div class="ac-fallback">' + CHART_ICON + '</div>'
+        +   '<img class="ac-img" src="' + CLOUD + 'aurum-news/' + n.img + '.jpg" alt="' + n.title + '" loading="lazy" onerror="this.style.display=\'none\'">'
+        +   '<div class="ac-halftone"></div></div>'
+        + '<div class="ac-body">'
+        +   '<div class="ac-badges"><span class="ac-tag">ข่าวสำคัญ</span><span class="impact-badge ' + im.cls + '">' + im.th + '</span></div>'
+        +   '<p class="ac-title" style="font-family:inherit;font-style:normal;font-size:15px">' + n.title + '</p>'
+        +   '<div class="ac-meta"><span class="font-mono">⏱ ' + n.time + '</span><span>via ' + srcLabel(n.source) + '</span></div>'
+        +   ev
+        + '</div></div>';
+    }).join('');
+    host.innerHTML = secHead('ข่าวสำคัญ · AI กรองแล้ว', 'via ForexFactory + Finnhub') + '<div class="card-grid">' + cards + '</div>';
+  }
+
+  function renderMoves() {
+    const host = document.getElementById('movement-section');
+    if (!host) return;
+    const cards = MOVES.map(m => {
+      const up = m.dir === 'up';
+      const color = up ? '#5fe0a0' : '#f08b8a';
+      const bgc = up ? 'rgba(15,191,106,.14)' : 'rgba(226,75,74,.14)';
+      const arrow = up ? '▲' : '▼';
+      return '<div class="ac">'
+        + '<div class="ac-imgwrap"><div class="ac-fallback">' + CHART_ICON + '</div>'
+        +   '<img class="ac-img" src="' + CLOUD + 'aurum-movement/' + m.img + '.jpg" alt="' + m.asset + '" loading="lazy" onerror="this.style.display=\'none\'">'
+        +   '<div class="ac-halftone"></div></div>'
+        + '<div class="ac-body">'
+        +   '<div class="ac-badges"><span class="ac-tag">เคลื่อนไหวสำคัญ</span>'
+        +     '<span class="ac-tag" style="background:' + bgc + ';color:' + color + ';border-color:' + color + '66">' + arrow + ' ' + m.magnitude + '</span></div>'
+        +   '<p class="ac-title" style="font-family:\'JetBrains Mono\',monospace;font-style:normal;font-size:15px;color:#f5e8c7">' + m.asset + ' · ' + m.window + '</p>'
+        +   '<div class="ac-meta"><span>' + formatAge(new Date(Date.now() - m.minsAgo * 60000).toISOString()) + '</span><span class="impact-badge impact-low">AURUM AI</span></div>'
+        + '</div></div>';
+    }).join('');
+    host.innerHTML = secHead('เคลื่อนไหวสำคัญ', '') + '<div class="card-grid">' + cards + '</div>';
+  }
+
+  /* ---------- AI auto-push widget ---------- */
+  function renderAIPush() {
+    const last = document.getElementById('ai-last-push');
+    const today = document.getElementById('ai-pushes-today');
+    if (last) last.textContent = AI_PUSH.active ? formatAge(AI_PUSH.lastPushAt) : 'หยุดชั่วคราว';
+    if (today) countUp(today, AI_PUSH.pushesToday);
+  }
+  const aiToggle = document.getElementById('ai-push-toggle');
+  if (aiToggle) aiToggle.addEventListener('click', () => {
+    document.getElementById('ai-push-widget').classList.toggle('collapsed');
+  });
+
+  /* Skeleton-then-fill to show the shimmer loading states (and the count-up). */
+  const newsHost = document.getElementById('news-section');
+  const moveHost = document.getElementById('movement-section');
+  if (newsHost) newsHost.innerHTML = secHead('ข่าวสำคัญ · AI กรองแล้ว', '') + skeletonCards(3);
+  if (moveHost) moveHost.innerHTML = secHead('เคลื่อนไหวสำคัญ', '') + skeletonCards(2);
+  setTimeout(() => { renderNews(); renderMoves(); renderAIPush(); }, reduceMotion ? 0 : 650);
+
+  /* ===================================================================
+     BEAUTY PASS — shell behaviour: Lucide icons, detail drawer, sidebar
+     navigation, hamburger, category filter, loading screen, GSAP entrance.
+     Everything guards window.gsap / window.lucide so the page works without
+     the CDN libs (and under jsdom in CI).
+     =================================================================== */
+  function lucide() { try { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (e) {} }
+  lucide();
+
+  // ---- Atmospheric background video: pause on reduced-motion / mobile ----
+  (function bgVideo() {
+    const v = document.getElementById('aurum-bg-video');
+    if (!v) return;
+    const calm = () => { try { v.pause(); } catch (e) {} };
+    if (reduceMotion) {
+      v.removeAttribute('autoplay');
+      v.addEventListener('loadeddata', () => { try { v.currentTime = 0; } catch (e) {} calm(); });
+      calm();                                  // hold the first frame as a static image
+    } else if (isSmall()) {
+      calm();                                  // hidden via CSS; pause to save battery/data
+    } else {
+      try { const pr = v.play && v.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
+    }
+  })();
+
+  // ---- Detail drawer (exposed so selectPost / activateTab can drive it) ----
+  const drawer = document.getElementById('pane-detail');
+  const drawerBackdrop = document.getElementById('detail-backdrop');
+  window.openDetailDrawer = function () {
+    if (!drawer) return;
+    drawer.classList.add('open');
+    if (drawerBackdrop) drawerBackdrop.classList.add('show');
+  };
+  window.closeDetailDrawer = function () {
+    if (!drawer) return;
+    drawer.classList.remove('open');
+    if (drawerBackdrop) drawerBackdrop.classList.remove('show');
+  };
+  const detailClose = document.getElementById('detail-close');
+  if (detailClose) detailClose.addEventListener('click', window.closeDetailDrawer);
+  if (drawerBackdrop) drawerBackdrop.addEventListener('click', window.closeDetailDrawer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawer && drawer.classList.contains('open')) window.closeDetailDrawer();
+  });
+
+  // ---- Sidebar navigation ----
+  const shell = document.getElementById('app-shell');
+  function setNavActive(btn) {
+    document.querySelectorAll('.side-item').forEach(b => b.classList.toggle('active', b === btn));
+  }
+  function scrollTopSmooth(el) { try { el.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { try { el.scrollTop = 0; } catch (_) {} } }
+  function scrollToSection(key) {
+    const content = document.getElementById('content');
+    if (!content) return;
+    if (key === 'dashboard') { scrollTopSmooth(content); return; }
+    const target = key === 'analysis'
+      ? document.getElementById('pane-list')
+      : document.querySelector('.dash-section[data-section="' + key + '"]');
+    if (target) { try { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }
+  }
+  document.querySelectorAll('.side-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setNavActive(btn);
+      if (shell) shell.classList.remove('nav-open');   // close mobile drawer
+      const pill = btn.getAttribute('data-pill');
+      if (pill) {
+        const target = document.querySelector('.room-menu-pill[data-panel="' + pill + '"]');
+        if (target) target.click();
+        const content = document.getElementById('content');
+        if (content) scrollTopSmooth(content);
+      } else {
+        // Returning to a dashboard view — close any lingering help/TV panel.
+        const openPill = document.querySelector('.room-menu-pill.active');
+        if (openPill) openPill.click();
+        scrollToSection(btn.getAttribute('data-nav'));
+      }
+    });
+  });
+
+  // ---- Hamburger (mobile) ----
+  const burger = document.getElementById('hamburger');
+  const sideBackdrop = document.getElementById('sidebar-backdrop');
+  if (burger && shell) burger.addEventListener('click', () => shell.classList.toggle('nav-open'));
+  if (sideBackdrop && shell) sideBackdrop.addEventListener('click', () => shell.classList.remove('nav-open'));
+
+  // ---- Category filter ----
+  function applyCategory(cat) {
+    document.querySelectorAll('.dash-section').forEach(s => {
+      const k = s.getAttribute('data-section');
+      s.style.display = (cat === 'all' || cat === 'five' || cat === k) ? '' : 'none';
+    });
+    if (cat === 'five') { const b = document.querySelector('.conf-btn[data-conf="5"]'); if (b) b.click(); }
+    else if (cat === 'all') { const b = document.querySelector('.conf-btn[data-conf="0"]'); if (b) b.click(); }
+  }
+  document.querySelectorAll('.cat-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b === btn));
+      applyCategory(btn.getAttribute('data-cat'));
+    });
+  });
+
+  // ---- One-shot card stagger + icon refresh after the feed renders ----
+  let cardsAnimated = false;
+  window.afterListRender = function () {
+    lucide();
+    if (cardsAnimated || reduceMotion || !window.gsap) return;
+    const cards = document.querySelectorAll('#list .ac');
+    if (!cards.length) return;
+    cardsAnimated = true;
+    window.gsap.from(cards, { opacity: 0, y: 20, duration: 0.5, stagger: 0.08, ease: 'power2.out' });
+  };
+
+  // ---- Page entrance (after the loader clears) ----
+  function runEntrance() {
+    lucide();
+    if (reduceMotion || !window.gsap) return;
+    try {
+      window.gsap.from('.side-item', { opacity: 0, x: -12, duration: 0.4, stagger: 0.05, delay: 0.1 });
+      window.gsap.from('.topbar', { opacity: 0, y: -20, duration: 0.6 });
+    } catch (e) {}
+  }
+
+  // ---- Loading screen (counter 000 → 100) ----
+  (function loader() {
+    const el = document.getElementById('loader');
+    if (!el) { runEntrance(); return; }
+    const numEl = document.getElementById('loader-num');
+    const barEl = document.getElementById('loader-bar-fill');
+    const wordEl = document.getElementById('loader-word');
+    const finish = () => {
+      el.classList.add('hide');
+      setTimeout(() => { el.style.display = 'none'; }, 520);
+      runEntrance();
+    };
+    if (reduceMotion || typeof requestAnimationFrame !== 'function') { finish(); return; }
+    const words = ['วิเคราะห์', 'ติดตาม', 'เข้าใจ'];
+    let wi = 0;
+    const wt = setInterval(() => {
+      wi = (wi + 1) % words.length;
+      if (wordEl) { wordEl.style.transition = 'none'; wordEl.style.transform = 'translateY(20px)'; wordEl.style.opacity = '0';
+        wordEl.textContent = words[wi];
+        requestAnimationFrame(() => { wordEl.style.transition = 'transform .4s, opacity .4s'; wordEl.style.transform = 'translateY(0)'; wordEl.style.opacity = '1'; });
+      }
+    }, 900);
+    const dur = 2700, start = performance.now();
+    (function tick(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const v = Math.round(t * 100);
+      if (numEl) numEl.textContent = String(v).padStart(3, '0');
+      if (barEl) barEl.style.transform = 'scaleX(' + (v / 100) + ')';
+      if (t < 1) requestAnimationFrame(tick);
+      else { clearInterval(wt); setTimeout(finish, 400); }
+    })(start);
+  })();
+})();
 </script>
 
 <!-- =====================================================================
