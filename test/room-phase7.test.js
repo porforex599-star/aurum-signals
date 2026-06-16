@@ -283,6 +283,25 @@ function listRowIds(document) {
       assert.strictEqual(img.getAttribute('src'), 'https://img.test/aurum-briefing.png');
       assert.strictEqual(document.getElementById('chart-modal-img') != null, true);
     });
+    test('ai_scheduled chart credit reads "ภาพจาก AURUM AI" (not TradingView)', () => {
+      const credit = document.getElementById('inline-chart-credit');
+      assert.ok(credit, 'inline-chart-credit must exist');
+      assert.ok(!credit.classList.contains('hidden'), 'credit caption must be visible with the image');
+      assert.ok(credit.textContent.includes('AURUM AI'), 'briefing credit should attribute AURUM AI');
+      assert.ok(!credit.textContent.includes('TradingView'), 'briefing credit must not say TradingView');
+    });
+  }
+
+  /* A Pine post keeps the TradingView credit (regression guard for the source switch). */
+  {
+    const pineRow = row('pc1', 'XAUUSD', 'bullish', 'https://img.test/pine.png', 5);
+    const { document } = await boot([pineRow]);
+    await waitFor(() => document.getElementById('row-pc1'));
+    test('pine post chart credit still reads "ภาพจาก TradingView"', () => {
+      const credit = document.getElementById('inline-chart-credit');
+      assert.ok(credit && !credit.classList.contains('hidden'));
+      assert.ok(credit.textContent.includes('TradingView'), 'non-briefing credit stays TradingView');
+    });
   }
 
   /* --- mobile responsive: inline image fills width (CSS rule present) ----- */
