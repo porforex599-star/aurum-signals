@@ -84,6 +84,7 @@ interface Candidate {
   expected_value: string | null;
   previous_value: string | null;
   published_at: string;      // ISO
+  image_url: string | null;  // Finnhub items carry one; FF never does → Unsplash later
 }
 
 interface ScoredRow extends Candidate {
@@ -180,6 +181,7 @@ async function fetchForexFactory(): Promise<Candidate[]> {
         expected_value: forecast || null,
         previous_value: previous || null,
         published_at,
+        image_url: null,   // ForexFactory calendar items have no image
       });
     }
     return out;
@@ -212,6 +214,11 @@ async function fetchFinnhub(): Promise<Candidate[]> {
       const published_at = n.datetime
         ? new Date(n.datetime * 1000).toISOString()
         : new Date().toISOString();
+      // Finnhub items carry an `image` field — keep it when it's a real https
+      // URL so article-generator can reuse it instead of querying Unsplash.
+      const image_url = typeof n.image === "string" && n.image.startsWith("https://")
+        ? n.image
+        : null;
       out.push({
         external_id: `fh_${n.id ?? hashId(title)}`,
         source: "finnhub",
@@ -220,6 +227,7 @@ async function fetchFinnhub(): Promise<Candidate[]> {
         expected_value: null,
         previous_value: null,
         published_at,
+        image_url,
       });
     }
     return out;
@@ -386,6 +394,7 @@ async function runFetch(sb: SupabaseClient) {
     expected_value: r.expected_value,
     previous_value: r.previous_value,
     published_at: r.published_at,
+    image_url: r.image_url,   // Finnhub direct image (FF rows stay null → Unsplash)
   }));
 
   // 7. Insert (ON CONFLICT external_id DO NOTHING).
