@@ -2,13 +2,21 @@
 // AURUM AI — Edge Function: scheduled-analyzer
 //
 // Project: aurum-customers (etwlurpjrqlvrxgsbhkd)
-// Phase B.4 (2026-06-16)
+// Phase B.4 (2026-06-16) · Phase B.4.2 webhook path (2026-06-16)
 //
 // Posts a structured Thai XAUUSD market briefing into analysis_posts three
-// times a day (morning / afternoon / evening, Asia/Bangkok). Driven by three
-// pg_cron jobs that each POST {"slot":"morning|afternoon|evening"}; a manual
-// invoke can pass the same body, or omit it to derive the slot from the
-// current Bangkok hour.
+// times a day (morning / afternoon / evening, Asia/Bangkok). Two invocation
+// shapes feed the same Claude briefing path:
+//   - cron:    three pg_cron jobs POST {"slot":"morning|afternoon|evening"}.
+//   - webhook: a Pine V.2 time-triggered TradingView alert POSTs
+//              {"type":"briefing_webhook","slot":...,"chart_image_url":...}.
+//              The webhook carries the AURUM-indicator chart screenshot
+//              (EMA / 3s markers / S-D zones), stored in chart_image_url so
+//              /room renders it inline — the proper chart Phase B.4.1's
+//              TradingView iframe could not show. (Phase B.4.2.)
+// A manual invoke can pass either body, or omit it to derive the slot from the
+// current Bangkok hour. The idempotency guard means whichever path fires first
+// for a given slot/day wins and the other is skipped — no double-post.
 //
 // Per run:
 //   1. Resolve the slot (body.slot → else current Bangkok hour bucket).
@@ -302,7 +310,7 @@ async function recordFailure(sb: SupabaseClient, err: string): Promise<void> {
 // ---------------------------------------------------------------------
 // Main run
 // ---------------------------------------------------------------------
-async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
+async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date, chartImageUrl: string | null = null) {
   const dayStart = bangkokDayStartUtcIso(now);
 
   // 1. Idempotency — has this slot already posted today (Bangkok)?
@@ -352,6 +360,9 @@ async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
   // 5. Insert. NOT-NULL chart columns get briefing-appropriate fills:
   //    key_level=0 (no price level for a briefing), confidence=70,
   //    risk_level derived from whether high-impact news is on the docket.
+  //    chart_image_url is populated only on the Pine V.2 webhook path (it
+  //    carries the AURUM-indicator screenshot); the cron path leaves it NULL,
+  //    and /room shows the "รอข้อมูลแท่งเทียน" placeholder for that case.
   const riskLevel = news.some((n) => n.impact === "high") ? "high" : "medium";
   const note = composeNote(briefing);
   const { data: inserted, error: insErr } = await sb
@@ -367,6 +378,8 @@ async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
       note,
       source: "ai_scheduled",
       schedule_slot: slot,
+      chart_image_url: chartImageUrl,
+      chart_image_generated_at: chartImageUrl ? new Date().toISOString() : null,
     })
     .select("id, created_at")
     .single();
@@ -379,6 +392,7 @@ async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
     title: briefing.title,
     bias: briefing.bias,
     risk_level: riskLevel,
+    chart_image_url: chartImageUrl,
     context: { pine_posts: pine.length, news_items: news.length },
   };
 }
@@ -392,22 +406,37 @@ serve(async (req) => {
   }
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-  // Resolve slot: explicit body.slot wins, else derive from Bangkok hour.
+  // Resolve invocation. Two POST shapes, one Claude path:
+  //   - cron:    {"slot":"morning|afternoon|evening"}  → no chart screenshot.
+  //   - webhook: {"type":"briefing_webhook","slot":...,"chart_image_url":...}
+  //              fired by a Pine V.2 time-triggered TradingView alert, carrying
+  //              the AURUM-indicator chart screenshot.
+  // Either way the slot resolves the same (explicit body.slot wins, else the
+  // current Bangkok hour bucket) and the same idempotency guard prevents a
+  // cron+webhook double-post for one slot/day.
   const now = new Date();
   let slot: Slot = currentSlot(now);
+  let chartImageUrl: string | null = null;
+  let isWebhook = false;
   try {
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}));
       const s = body?.slot;
       if (s === "morning" || s === "afternoon" || s === "evening") slot = s;
+      if (body?.type === "briefing_webhook") {
+        isWebhook = true;
+        const url = typeof body?.chart_image_url === "string" ? body.chart_image_url.trim() : "";
+        // Only accept an http(s) URL; ignore unsubstituted {{chart}} placeholders.
+        if (/^https?:\/\//i.test(url)) chartImageUrl = url;
+      }
     }
   } catch (_) { /* keep derived slot */ }
 
   try {
-    const result = await runAnalyze(sb, slot, now);
+    const result = await runAnalyze(sb, slot, now, chartImageUrl);
     await recordSuccess(sb);
-    console.log("[scheduled-analyzer] ok", JSON.stringify(result));
-    return json({ ok: true, ...result });
+    console.log("[scheduled-analyzer] ok", JSON.stringify({ via: isWebhook ? "webhook" : "cron", ...result }));
+    return json({ ok: true, via: isWebhook ? "webhook" : "cron", ...result });
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e);
     console.error("[scheduled-analyzer] run failed:", msg);

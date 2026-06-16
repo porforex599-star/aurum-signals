@@ -267,6 +267,24 @@ function listRowIds(document) {
     });
   }
 
+  /* --- Phase B.4.2: an ai_scheduled briefing carrying a chart_image_url (a
+     Pine V.2 webhook screenshot) renders the inline <img>, exactly like a
+     Pine post — no iframe, no special-casing on source. ------------------- */
+  {
+    const briefing = aiRow('b1', 'morning', 5);
+    briefing.chart_image_url = 'https://img.test/aurum-briefing.png';
+    briefing.chart_image_generated_at = new Date().toISOString();
+    const { document } = await boot([briefing]);
+    await waitFor(() => document.getElementById('row-b1'));
+    test('ai_scheduled briefing with a Pine-webhook chart renders an inline <img>', () => {
+      const img = document.getElementById('inline-chart-img');
+      assert.ok(img, 'inline-chart-img must exist');
+      assert.ok(!img.classList.contains('hidden'), 'inline image must be visible for a briefing carrying a chart');
+      assert.strictEqual(img.getAttribute('src'), 'https://img.test/aurum-briefing.png');
+      assert.strictEqual(document.getElementById('chart-modal-img') != null, true);
+    });
+  }
+
   /* --- mobile responsive: inline image fills width (CSS rule present) ----- */
   test('inline image CSS fills container width (responsive)', () => {
     assert.ok(/\.chart-inline-img\s*\{[^}]*width:\s*100%/.test(ROOM_HTML), 'width:100% rule expected');
