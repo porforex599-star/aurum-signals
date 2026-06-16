@@ -359,6 +359,7 @@ async function runFetch(sb: SupabaseClient) {
     if (s.score >= 4 || c.impact === "high") {
       scored.push({
         ...c,
+        title: s.thai_title,   // store the AI's Thai translation, not the source's English
         impact: finalImpact(c, s.score),
         category: s.category,
         importance_score: s.score,
