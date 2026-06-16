@@ -1,3 +1,4 @@
 node_modules/
 package-lock.json
 scripts/.tailwind-screenshot.css
+.claude/
