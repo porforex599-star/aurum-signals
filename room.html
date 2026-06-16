@@ -147,6 +147,17 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   .dn-card:hover { transform: none; }
 }
 
+/* Daily-news panel (room-panel pattern) — title, subtitle, category filter, 2-col grid */
+.dn-panel-title { font-family: 'Instrument Serif', 'Cormorant Garamond', Georgia, serif; font-style: italic; }
+.dn-panel-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin: 2px 0 14px; }
+.dn-filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.dn-filter { font-size: 12px; color: #c9b896; background: rgba(212,175,55,0.05); border: 1px solid #2c1a4a; border-radius: 999px; padding: 5px 13px; cursor: pointer; transition: background .2s cubic-bezier(0.4,0,0.2,1), color .2s, border-color .2s; }
+.dn-filter:hover { border-color: #8b7029; color: #e7c66e; }
+.dn-filter.active { color: #0a0420; background: #d4af37; border-color: #d4af37; font-weight: 600; }
+.dn-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.dn-empty { grid-column: 1 / -1; text-align: center; color: #7a6f99; font-size: 13px; padding: 24px 0; }
+@media (max-width: 1023px) { .dn-grid { grid-template-columns: 1fr; } }
+
 /* Pending (unconfirmed) pulse + new-arrival highlight + confirm glow */
 .pending-dot { animation: pulse 1.1s infinite; }
 @keyframes slideInTop { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
@@ -718,7 +729,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
    ===================================================================== */
 #room-menu { -ms-overflow-style: none; scrollbar-width: none; }
 #room-menu::-webkit-scrollbar { display: none; }
-.room-menu-pill {
+.room-menu-pill, .room-tab-pill {
   white-space: nowrap;
   font-family: inherit;
   font-size: 13px;
@@ -731,13 +742,18 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
-.room-menu-pill:hover { border-color: #8b7029; color: #e7c66e; }
-.room-menu-pill.active {
+.room-menu-pill:hover, .room-tab-pill:hover { border-color: #8b7029; color: #e7c66e; }
+.room-menu-pill.active, .room-tab-pill.active {
   color: #f5cd52;
   background: #241a0d;
   border-color: #d4af37;
   box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.25);
 }
+/* News pill — count badge + high-impact dot */
+.room-tab-pill { display: inline-flex; align-items: center; gap: 6px; }
+.news-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; line-height: 1; color: #0a0420; background: #d4af37; border-radius: 999px; padding: 2px 6px; }
+.news-dot { width: 7px; height: 7px; border-radius: 999px; background: #e24b4a; box-shadow: 0 0 6px rgba(226,75,74,0.7); animation: dnPulse 2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .news-dot { animation: none; } }
 
 #room-panel { display: none; }
 #room-panel.open { display: block; }
@@ -1339,6 +1355,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
       <button type="button" class="room-menu-pill" data-panel="tv" aria-pressed="false">TradingView Username</button>
       <button type="button" class="room-menu-pill" data-panel="usage" aria-pressed="false">ข้อมูลการใช้งาน</button>
       <button type="button" class="room-menu-pill" data-panel="howto" aria-pressed="false">วิธีการใช้งาน</button>
+      <button type="button" class="room-tab-pill" data-panel="daily-news" aria-pressed="false">ข่าวสำคัญวันนี้<span class="news-count">6</span><span class="news-dot" aria-hidden="true"></span></button>
     </div>
   </nav>
 
@@ -1394,14 +1411,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
             <button class="conf-btn px-2 py-1 rounded-md border border-line bg-surface text-warmDim" data-conf="5">5★</button>
           </div>
         </div>
-      </div>
-      <!-- Daily news (AI-filtered) — mock in Phase A, real (ForexFactory+Finnhub) in Phase B -->
-      <div id="daily-news" class="flex-shrink-0 border-b border-line">
-        <div class="px-4 pt-4 pb-2">
-          <h2 class="dn-title">ข่าวสำคัญวันนี้</h2>
-          <p class="dn-sub">AURUM AI กรองให้แล้ว · 2-4 รายการ/วัน</p>
-        </div>
-        <div id="daily-news-list" class="dn-scroll px-3 pb-3" aria-live="polite"></div>
       </div>
       <!-- List -->
       <div id="list" class="flex-1 min-h-0 overflow-y-auto scroll-y p-2 space-y-1.5"></div>
@@ -2705,53 +2714,6 @@ loadRealFeed();    // real analysis_posts only — no demo/simulated content
 </script>
 
 <!-- =====================================================================
-     Daily news (AI-filtered) — Phase A renders mock data into #daily-news-list.
-     Phase B swaps `DAILY_NEWS` for a Supabase `daily_news` query (same shape):
-       { id, time: 'HH:MM', category, title, impact, source, publishedAt }
-     Self-contained: only touches #daily-news-list. Approved vocabulary only.
-     ===================================================================== -->
-<script>
-(function () {
-  'use strict';
-  const host = document.getElementById('daily-news-list');
-  if (!host) return;
-
-  // Phase A mock (8-slot shape; Phase B → real ForexFactory + Finnhub feed).
-  const DAILY_NEWS = [
-    { id: 'dn1', time: '08:30', category: 'เศรษฐกิจ',      title: 'ดัชนีราคาผู้บริโภค US เดือนพฤษภาคม',        impact: 'high',   source: 'ForexFactory' },
-    { id: 'dn2', time: '10:15', category: 'นโยบายเงิน',    title: 'Fed Chair Powell แถลงต่อ Congress',          impact: 'high',   source: 'Finnhub' },
-    { id: 'dn3', time: '13:45', category: 'สินค้าโภคภัณฑ์', title: 'น้ำมัน WTI ปรับขึ้นจากตะวันออกกลาง',          impact: 'medium', source: 'Finnhub' },
-    { id: 'dn4', time: '15:30', category: 'เศรษฐกิจ',      title: 'ตัวเลขจ้างงานนอกภาคเกษตร EU พฤษภาคม',        impact: 'medium', source: 'ForexFactory' },
-    { id: 'dn5', time: '19:00', category: 'ภูมิรัฐศาสตร์',  title: 'ผู้นำ G7 ออกแถลงการณ์ร่วมหลังการประชุม',       impact: 'high',   source: 'Finnhub' },
-    { id: 'dn6', time: '20:30', category: 'นโยบายเงิน',    title: 'รายงาน ECB ประจำเดือน',                       impact: 'low',    source: 'ForexFactory' },
-  ];
-
-  const CAT_CLASS = { 'เศรษฐกิจ': 'dn-cat-eco', 'นโยบายเงิน': 'dn-cat-mon', 'สินค้าโภคภัณฑ์': 'dn-cat-com', 'ภูมิรัฐศาสตร์': 'dn-cat-geo' };
-  const IMPACT_TH = { high: 'ผลกระทบสูง', medium: 'ผลกระทบปานกลาง', low: 'ผลกระทบน้อย' };
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-  function card(n) {
-    const catCls = CAT_CLASS[n.category] || 'dn-cat-eco';
-    const impact = (n.impact === 'high' || n.impact === 'medium') ? n.impact : 'low';
-    return '<div class="dn-card">'
-      + '<div class="dn-top">'
-      +   '<div class="dn-meta"><span class="dn-time">' + esc(n.time) + '</span>'
-      +     '<span class="dn-cat ' + catCls + '">' + esc(n.category) + '</span></div>'
-      +   '<span class="dn-dot dn-dot-' + impact + '" title="' + (IMPACT_TH[impact] || '') + '"></span>'
-      + '</div>'
-      + '<p class="dn-headline">' + esc(n.title) + '</p>'
-      + '<p class="dn-foot">' + (IMPACT_TH[impact] || '') + ' · via ' + esc(n.source) + '</p>'
-      + '</div>';
-  }
-  // Newest first (by HH:MM).
-  const items = DAILY_NEWS.slice().sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
-  host.innerHTML = items.map(card).join('');
-})();
-</script>
-
-<!-- =====================================================================
      Phase C Step 3 — Aurum Gold TradingView-grant module.
 
      Runs after the access gate reveals the room (gate calls
@@ -3306,9 +3268,57 @@ window.AurumGoldTV = (function () {
     tv: 'TradingView Username ของคุณ',
     usage: 'ข้อมูลการใช้งาน',
     howto: 'วิธีการใช้งาน',
+    'daily-news': 'ข่าวสำคัญวันนี้',
   };
 
-  function pills() { return Array.prototype.slice.call(document.querySelectorAll('.room-menu-pill')); }
+  /* ---- ข่าวสำคัญวันนี้ (daily news) panel ----
+     Phase A mock; Phase B swaps DAILY_NEWS for a Supabase `daily_news` query
+     of the same shape: { id, time:'HH:MM', category, title, impact, source }. */
+  const DAILY_NEWS = [
+    { id: 'dn1', time: '08:30', category: 'เศรษฐกิจ',      title: 'ดัชนีราคาผู้บริโภค US เดือนพฤษภาคม',     impact: 'high',   source: 'ForexFactory' },
+    { id: 'dn2', time: '10:15', category: 'นโยบายเงิน',    title: 'Fed Chair Powell แถลงต่อ Congress',       impact: 'high',   source: 'Finnhub' },
+    { id: 'dn3', time: '13:45', category: 'สินค้าโภคภัณฑ์', title: 'น้ำมัน WTI ปรับขึ้นจากตะวันออกกลาง',       impact: 'medium', source: 'Finnhub' },
+    { id: 'dn4', time: '15:30', category: 'เศรษฐกิจ',      title: 'ตัวเลขจ้างงานนอกภาคเกษตร EU พฤษภาคม',     impact: 'medium', source: 'ForexFactory' },
+    { id: 'dn5', time: '19:00', category: 'ภูมิรัฐศาสตร์',  title: 'ผู้นำ G7 ออกแถลงการณ์ร่วมหลังการประชุม',    impact: 'high',   source: 'Finnhub' },
+    { id: 'dn6', time: '20:30', category: 'นโยบายเงิน',    title: 'รายงาน ECB ประจำเดือน',                    impact: 'low',    source: 'ForexFactory' },
+  ];
+  const NEWS_CAT_CLASS = { 'เศรษฐกิจ': 'dn-cat-eco', 'นโยบายเงิน': 'dn-cat-mon', 'สินค้าโภคภัณฑ์': 'dn-cat-com', 'ภูมิรัฐศาสตร์': 'dn-cat-geo' };
+  const NEWS_IMPACT_TH = { high: 'ผลกระทบสูง', medium: 'ผลกระทบปานกลาง', low: 'ผลกระทบน้อย' };
+  const NEWS_CATS = ['เศรษฐกิจ', 'นโยบายเงิน', 'สินค้าโภคภัณฑ์', 'ภูมิรัฐศาสตร์'];
+
+  function newsCard(n) {
+    const catCls = NEWS_CAT_CLASS[n.category] || 'dn-cat-eco';
+    const impact = (n.impact === 'high' || n.impact === 'medium') ? n.impact : 'low';
+    return '<div class="dn-card">'
+      + '<div class="dn-top"><div class="dn-meta"><span class="dn-time">' + escapeHtml(n.time) + '</span>'
+      +   '<span class="dn-cat ' + catCls + '">' + escapeHtml(n.category) + '</span></div>'
+      +   '<span class="dn-dot dn-dot-' + impact + '" title="' + (NEWS_IMPACT_TH[impact] || '') + '"></span></div>'
+      + '<p class="dn-headline">' + escapeHtml(n.title) + '</p>'
+      + '<p class="dn-foot">' + (NEWS_IMPACT_TH[impact] || '') + ' · via ' + escapeHtml(n.source) + '</p>'
+      + '</div>';
+  }
+  function renderNewsGrid(cat) {
+    const grid = document.getElementById('dn-grid');
+    if (!grid) return;
+    const items = DAILY_NEWS
+      .filter(function (n) { return cat === 'all' || n.category === cat; })
+      .sort(function (a, b) { return a.time < b.time ? 1 : a.time > b.time ? -1 : 0; }); // newest first
+    grid.innerHTML = items.length ? items.map(newsCard).join('')
+      : '<p class="dn-empty">ไม่มีข่าวในหมวดนี้วันนี้</p>';
+  }
+  function dailyNewsShell() {
+    let filters = '<button class="dn-filter active" data-cat="all">ทั้งหมด</button>';
+    NEWS_CATS.forEach(function (c) { filters += '<button class="dn-filter" data-cat="' + c + '">' + escapeHtml(c) + '</button>'; });
+    return '<div class="room-panel-card">'
+      + '<button class="room-panel-close" type="button" aria-label="ปิด">&times;</button>'
+      + '<h2 class="room-panel-title dn-panel-title">ข่าวสำคัญวันนี้</h2>'
+      + '<p class="dn-panel-sub">AURUM AI กรองให้แล้ว · 2-4 รายการ/วัน</p>'
+      + '<div class="dn-filter-row">' + filters + '</div>'
+      + '<div id="dn-grid" class="dn-grid"></div>'
+      + '</div>';
+  }
+
+  function pills() { return Array.prototype.slice.call(document.querySelectorAll('.room-menu-pill, .room-tab-pill')); }
 
   function setActivePill(name) {
     pills().forEach(function (b) {
@@ -3342,6 +3352,10 @@ window.AurumGoldTV = (function () {
         '<div id="room-tv-body"><p class="room-tv-loading">กำลังโหลด...</p></div>');
       p.classList.add('open');
       loadTvUsername();
+    } else if (name === 'daily-news') {
+      p.innerHTML = dailyNewsShell();
+      p.classList.add('open');
+      renderNewsGrid('all');
     } else {
       const body = name === 'howto' ? HOWTO_HTML
                  : name === 'usage' ? USAGE_HTML
@@ -3445,7 +3459,7 @@ window.AurumGoldTV = (function () {
     wired = true;
 
     m.addEventListener('click', function (e) {
-      const pill = e.target.closest && e.target.closest('.room-menu-pill');
+      const pill = e.target.closest && e.target.closest('.room-menu-pill, .room-tab-pill');
       if (!pill) return;
       const name = pill.getAttribute('data-panel');
       if (active === name) { closePanel(); return; }   // toggle the active panel closed
@@ -3455,8 +3469,25 @@ window.AurumGoldTV = (function () {
     p.addEventListener('click', function (e) {
       if (e.target.closest && e.target.closest('.room-panel-close')) { closePanel(); return; }
       const copyBtn = e.target.closest && e.target.closest('.room-tv-copy');
-      if (copyBtn) copyUsername(copyBtn);
+      if (copyBtn) { copyUsername(copyBtn); return; }
+      // Daily-news category sub-pills
+      const f = e.target.closest && e.target.closest('.dn-filter');
+      if (f) {
+        Array.prototype.forEach.call(p.querySelectorAll('.dn-filter'), function (b) { b.classList.toggle('active', b === f); });
+        renderNewsGrid(f.getAttribute('data-cat'));
+      }
     });
+
+    // ESC closes whichever room panel is open (matches the chart/popup modals).
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && active) closePanel();
+    });
+
+    // Daily-news pill badge: count + a red dot when the day has any high-impact item.
+    const cnt = m.querySelector('.room-tab-pill .news-count');
+    if (cnt) cnt.textContent = String(DAILY_NEWS.length);
+    const dot = m.querySelector('.room-tab-pill .news-dot');
+    if (dot && !DAILY_NEWS.some(function (n) { return n.impact === 'high'; })) dot.style.display = 'none';
   }
 
   if (document.readyState === 'loading') {
