@@ -167,6 +167,53 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 @keyframes dnShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .dn-sk { animation: none; } }
 
+/* Click-to-read affordance on a news card (Phase B.5) */
+.dn-card[data-news-id] { cursor: pointer; }
+.dn-card[data-news-id]:focus-visible { outline: 2px solid #d4af37; outline-offset: 2px; }
+.dn-read { display: inline-flex; align-items: center; gap: 3px; color: #c9a14a; }
+.dn-card[data-news-id]:hover .dn-read { color: #e7c66e; }
+
+/* ---- Article view (Phase B.5 · replaces the list inside #dn-body) ---- */
+.dn-fade { animation: dnFade .2s cubic-bezier(0.4,0,0.2,1); }
+@keyframes dnFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.article-back { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #c9b896; background: rgba(212,175,55,0.05); border: 1px solid #2c1a4a; border-radius: 999px; padding: 6px 14px; cursor: pointer; transition: color .2s, border-color .2s; margin-bottom: 16px; }
+.article-back:hover { color: #e7c66e; border-color: #8b7029; }
+.article-view { max-width: 720px; }
+.article-hero { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; border: 1px solid rgba(212,175,55,0.15); background: rgba(255,255,255,0.02); }
+.article-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.article-hero-fallback { width: 100%; height: 100%; align-items: center; justify-content: center; }
+.article-hero-fallback svg { width: 64px; height: 64px; }
+.article-hero-fallback.dn-cat-eco { background: rgba(30,110,232,0.10); color: #7fb0f5; }
+.article-hero-fallback.dn-cat-mon { background: rgba(212,175,55,0.10); color: #e7c66e; }
+.article-hero-fallback.dn-cat-com { background: rgba(239,159,39,0.10); color: #f3c178; }
+.article-hero-fallback.dn-cat-geo { background: rgba(160,120,220,0.12); color: #c4a8e6; }
+.article-credit { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; color: rgba(255,255,255,0.78); padding: 5px 10px; background: linear-gradient(0deg, rgba(0,0,0,0.55), transparent); text-align: right; }
+.article-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 6px; }
+.article-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #c9b896; }
+.article-category { font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: rgba(212,175,55,0.10); color: #e7c66e; border: 1px solid rgba(212,175,55,0.28); }
+.article-impact { font-size: 10px; padding: 2px 9px; border-radius: 999px; border: 1px solid transparent; }
+.article-impact.high { background: rgba(226,75,74,0.14); color: #f0908f; border-color: rgba(226,75,74,0.40); }
+.article-impact.medium { background: rgba(239,159,39,0.14); color: #f3c178; border-color: rgba(239,159,39,0.38); }
+.article-impact.low { background: rgba(255,255,255,0.06); color: #9c93b5; border-color: rgba(255,255,255,0.18); }
+.article-title { font-family: 'Instrument Serif', 'Cormorant Garamond', Georgia, serif; color: #f5e8c7; font-size: 26px; font-weight: 400; line-height: 1.25; margin: 8px 0 4px; }
+.article-section { margin-top: 22px; }
+.article-section h2 { font-family: 'Instrument Serif', 'Cormorant Garamond', Georgia, serif; font-style: italic; color: #e7c66e; font-size: 22px; font-weight: 400; margin: 28px 0 8px; }
+.article-section p { font-size: 15px; line-height: 1.7; color: #ddd2ee; margin: 0; }
+.article-section ul { list-style: none; padding-left: 24px; margin: 6px 0 0; }
+.article-section li { position: relative; font-size: 15px; line-height: 1.7; color: #ddd2ee; margin-bottom: 6px; }
+.article-section li::before { content: ''; position: absolute; left: -18px; top: 11px; width: 7px; height: 7px; border-radius: 999px; background: #d4af37; }
+.article-source { margin-top: 26px; padding-top: 14px; border-top: 1px solid #2c1a4a; font-size: 12px; color: #7a6f99; }
+.article-loading { color: #c9b896; font-size: 14px; text-align: center; padding: 20px 12px; }
+.dn-sk-hero { width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; }
+.article-error { text-align: center; color: #7a6f99; font-size: 14px; padding: 36px 12px; }
+@media (max-width: 767px) {
+  .article-hero { aspect-ratio: 4 / 3; }
+  .article-section p, .article-section li { font-size: 14px; }
+  .article-title { font-size: 22px; }
+  .article-section h2 { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .dn-fade { animation: none; } }
+
 /* Pending (unconfirmed) pulse + new-arrival highlight + confirm glow */
 .pending-dot { animation: pulse 1.1s infinite; }
 @keyframes slideInTop { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
@@ -3295,6 +3342,7 @@ window.AurumGoldTV = (function () {
   ];
   const NEWS_CAT_CLASS = { 'เศรษฐกิจ': 'dn-cat-eco', 'นโยบายเงิน': 'dn-cat-mon', 'สินค้าโภคภัณฑ์': 'dn-cat-com', 'ภูมิรัฐศาสตร์': 'dn-cat-geo' };
   const NEWS_IMPACT_TH = { high: 'ผลกระทบสูง', medium: 'ผลกระทบปานกลาง', low: 'ผลกระทบน้อย' };
+  const NEWS_IMPACT_LABEL = { high: 'สูง', medium: 'ปานกลาง', low: 'น้อย' };   // article-view badge (prefixed with "ผลกระทบ")
   const NEWS_CATS = ['เศรษฐกิจ', 'นโยบายเงิน', 'สินค้าโภคภัณฑ์', 'ภูมิรัฐศาสตร์'];
   const NEWS_SOURCE_LABEL = { forexfactory: 'ForexFactory', finnhub: 'Finnhub' };
 
@@ -3305,6 +3353,9 @@ window.AurumGoldTV = (function () {
   let newsLoaded = false;     // a fetch (success or error-fallback) has completed
   let newsLoading = false;    // a fetch is in flight (dedup concurrent calls)
   let newsTimer = null;       // 5-min auto-refresh handle
+  let currentView = 'list';   // 'list' | 'article' — which view #dn-body shows
+  let currentArticleId = null; // row id open in the article view (null in list)
+  let newsScrollY = 0;        // saved list scroll, restored on back
 
   /* Pull the freshest <=4 high-importance items from the last 24h. Reuses the
      page's existing anon feed client (RLS allows anon SELECT on daily_news).
@@ -3364,12 +3415,14 @@ window.AurumGoldTV = (function () {
   function newsCard(n) {
     const catCls = NEWS_CAT_CLASS[n.category] || 'dn-cat-eco';
     const impact = (n.impact === 'high' || n.impact === 'medium') ? n.impact : 'low';
-    return '<div class="dn-card">'
+    return '<div class="dn-card" data-news-id="' + escapeHtml(n.id) + '" role="button" tabindex="0"'
+      +   ' aria-label="อ่านบทความ: ' + escapeHtml(n.title) + '">'
       + '<div class="dn-top"><div class="dn-meta"><span class="dn-time">' + escapeHtml(n.time) + '</span>'
       +   '<span class="dn-cat ' + catCls + '">' + escapeHtml(n.category) + '</span></div>'
       +   '<span class="dn-dot dn-dot-' + impact + '" title="' + (NEWS_IMPACT_TH[impact] || '') + '"></span></div>'
       + '<p class="dn-headline">' + escapeHtml(n.title) + '</p>'
-      + '<p class="dn-foot">' + (NEWS_IMPACT_TH[impact] || '') + ' · via ' + escapeHtml(n.source) + '</p>'
+      + '<p class="dn-foot">' + (NEWS_IMPACT_TH[impact] || '') + ' · via ' + escapeHtml(n.source)
+      +   ' · <span class="dn-read">อ่านบทความ →</span></p>'
       + '</div>';
   }
   function newsSkeletonCard() {
@@ -3396,16 +3449,145 @@ window.AurumGoldTV = (function () {
       + (dailyNews.length ? 'ไม่มีข่าวในหมวดนี้วันนี้' : 'ยังไม่มีข่าวสำคัญในวันนี้ · AURUM AI กำลังกรองข้อมูล')
       + '</p>';
   }
-  function dailyNewsShell() {
-    let filters = '<button class="dn-filter active" data-cat="all">ทั้งหมด</button>';
-    NEWS_CATS.forEach(function (c) { filters += '<button class="dn-filter" data-cat="' + c + '">' + escapeHtml(c) + '</button>'; });
-    return '<div class="room-panel-card">'
-      + '<button class="room-panel-close" type="button" aria-label="ปิด">&times;</button>'
-      + '<h2 class="room-panel-title dn-panel-title">ข่าวสำคัญวันนี้</h2>'
+  // List view markup (lives inside #dn-body). The active filter reflects the
+  // current newsCat so returning from an article restores the chosen category.
+  function dailyNewsListHtml() {
+    let filters = '<button class="dn-filter' + (newsCat === 'all' ? ' active' : '') + '" data-cat="all">ทั้งหมด</button>';
+    NEWS_CATS.forEach(function (c) {
+      filters += '<button class="dn-filter' + (newsCat === c ? ' active' : '') + '" data-cat="' + escapeHtml(c) + '">' + escapeHtml(c) + '</button>';
+    });
+    return '<h2 class="room-panel-title dn-panel-title">ข่าวสำคัญวันนี้</h2>'
       + '<p class="dn-panel-sub">AURUM AI กรองให้แล้ว · 2-4 รายการ/วัน</p>'
       + '<div class="dn-filter-row">' + filters + '</div>'
-      + '<div id="dn-grid" class="dn-grid"></div>'
+      + '<div id="dn-grid" class="dn-grid"></div>';
+  }
+  function dailyNewsShell() {
+    return '<div class="room-panel-card">'
+      + '<button class="room-panel-close" type="button" aria-label="ปิด">&times;</button>'
+      + '<div id="dn-body">' + dailyNewsListHtml() + '</div>'
       + '</div>';
+  }
+
+  // ---- Article view (Phase B.5: click a card → full AI-written article) ----
+  // Category-coloured inline SVGs, shown when a row has no hero image.
+  const NEWS_CAT_ICON = {
+    'เศรษฐกิจ':       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>',
+    'นโยบายเงิน':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M4 10v9h16v-9"/><path d="M8 19v-6M12 19v-6M16 19v-6"/><path d="M3 21h18"/></svg>',
+    'สินค้าโภคภัณฑ์': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
+    'ภูมิรัฐศาสตร์':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 4 5.8 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.8-4-9s1.5-6.4 4-9z"/></svg>',
+  };
+  function categoryIconSvg(cat) { return NEWS_CAT_ICON[cat] || NEWS_CAT_ICON['เศรษฐกิจ']; }
+
+  // Fetch a single row fresh — gets the article JSONB + image fields the list
+  // mapping drops. RLS allows anon SELECT on daily_news.
+  async function fetchArticle(id) {
+    const client = (typeof getFeedClient === 'function') ? getFeedClient() : null;
+    if (!client) throw new Error('no_client');
+    const { data, error } = await client.from('daily_news').select('*').eq('id', id).single();
+    if (error) throw error;
+    return data;
+  }
+
+  function articleHeroHtml(d) {
+    const catCls = NEWS_CAT_CLASS[d.category] || 'dn-cat-eco';
+    const icon = categoryIconSvg(d.category);
+    let inner;
+    if (d.image_url) {
+      // Broken Finnhub/Unsplash URL → hide <img>, reveal the category fallback.
+      inner = '<img class="article-hero-img" src="' + escapeHtml(d.image_url) + '" alt="' + escapeHtml(d.title) + '"'
+        + ' onerror="this.style.display=\'none\';var f=this.parentNode.querySelector(\'.article-hero-fallback\');if(f)f.style.display=\'flex\';">'
+        + '<div class="article-hero-fallback ' + catCls + '" style="display:none">' + icon + '</div>'
+        + (d.image_credit ? '<div class="article-credit">' + escapeHtml(d.image_credit) + '</div>' : '');
+    } else {
+      inner = '<div class="article-hero-fallback ' + catCls + '" style="display:flex">' + icon + '</div>';
+    }
+    return '<div class="article-hero">' + inner + '</div>';
+  }
+
+  function articleHtml(d) {
+    const a = d.article || {};
+    const impact = (d.impact === 'high' || d.impact === 'medium') ? d.impact : 'low';
+    const time = (function () {
+      try { return new Date(d.published_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }); }
+      catch (_) { return ''; }
+    })();
+    const source = NEWS_SOURCE_LABEL[d.source] || d.source || '';
+    const points = Array.isArray(a.watch_points) ? a.watch_points : [];
+    let html = '<div class="article-view dn-fade">'
+      + '<button class="article-back" type="button">← กลับ</button>'
+      + articleHeroHtml(d)
+      + '<div class="article-meta">'
+      +   '<span class="article-time">' + escapeHtml(time) + '</span>'
+      +   '<span class="article-category">' + escapeHtml(d.category) + '</span>'
+      +   '<span class="article-impact ' + impact + '">ผลกระทบ' + (NEWS_IMPACT_LABEL[impact] || '') + '</span>'
+      + '</div>'
+      + '<h1 class="article-title">' + escapeHtml(d.title) + '</h1>';
+    if (a.background) {
+      html += '<section class="article-section"><h2>ความเป็นมา</h2><p>' + escapeHtml(a.background) + '</p></section>';
+    }
+    if (a.impact) {
+      html += '<section class="article-section"><h2>ผลกระทบต่อทอง XAUUSD</h2><p>' + escapeHtml(a.impact) + '</p></section>';
+    }
+    if (points.length) {
+      html += '<section class="article-section"><h2>จุดที่ต้องจับตา</h2><ul>'
+        + points.map(function (p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('') + '</ul></section>';
+    }
+    html += '<div class="article-source">ที่มา: ' + escapeHtml(source) + '</div>'
+      + '</div>';
+    return html;
+  }
+
+  function articleLoadingHtml() {
+    return '<div class="article-view dn-fade">'
+      + '<button class="article-back" type="button">← กลับ</button>'
+      + '<div class="dn-sk dn-sk-hero"></div>'
+      + '<p class="article-loading">AURUM AI กำลังเขียนบทความ · ลองอีกครั้งใน 1-2 นาที</p>'
+      + '</div>';
+  }
+  function articlePendingHtml() {
+    return '<div class="article-view dn-fade">'
+      + '<button class="article-back" type="button">← กลับ</button>'
+      + '<div class="dn-sk dn-sk-hero"></div>'
+      + '<p class="article-loading">AURUM AI กำลังเขียนบทความ · ลองอีกครั้งใน 1-2 นาที</p>'
+      + '</div>';
+  }
+  function articleErrorHtml() {
+    return '<div class="article-view dn-fade">'
+      + '<button class="article-back" type="button">← กลับ</button>'
+      + '<p class="article-error">ไม่สามารถโหลดบทความได้ในขณะนี้</p>'
+      + '</div>';
+  }
+
+  // Open the article view for a card, replacing the list inside #dn-body.
+  async function openArticle(id) {
+    if (!id) return;
+    const body = document.getElementById('dn-body');
+    if (!body) return;
+    const scroller = panel();
+    newsScrollY = scroller ? scroller.scrollTop : 0;   // remember list scroll
+    currentView = 'article';
+    currentArticleId = id;
+    body.innerHTML = articleLoadingHtml();
+    if (scroller) scroller.scrollTop = 0;
+    let data = null, failed = false;
+    try { data = await fetchArticle(id); }
+    catch (e) { failed = true; }
+    // Bail if the user navigated away or opened a different article meanwhile.
+    if (currentView !== 'article' || currentArticleId !== id) return;
+    if (failed) { body.innerHTML = articleErrorHtml(); return; }
+    body.innerHTML = (data && data.article) ? articleHtml(data) : articlePendingHtml();
+  }
+
+  // Return to the list view, restoring the category filter + scroll position.
+  function showNewsList() {
+    currentView = 'list';
+    currentArticleId = null;
+    const body = document.getElementById('dn-body');
+    if (!body) return;
+    body.innerHTML = dailyNewsListHtml();
+    renderNewsGrid();
+    const scroller = panel();
+    if (scroller) scroller.scrollTop = newsScrollY || 0;
   }
 
   function pills() { return Array.prototype.slice.call(document.querySelectorAll('.room-menu-pill, .room-tab-pill')); }
@@ -3443,6 +3625,8 @@ window.AurumGoldTV = (function () {
       p.classList.add('open');
       loadTvUsername();
     } else if (name === 'daily-news') {
+      currentView = 'list';        // always open on the list, even after a prior article view
+      currentArticleId = null;
       p.innerHTML = dailyNewsShell();
       p.classList.add('open');
       // Instant paint from whatever we have; skeleton only before the first load.
@@ -3562,12 +3746,24 @@ window.AurumGoldTV = (function () {
       if (e.target.closest && e.target.closest('.room-panel-close')) { closePanel(); return; }
       const copyBtn = e.target.closest && e.target.closest('.room-tv-copy');
       if (copyBtn) { copyUsername(copyBtn); return; }
+      // Article view: back button → return to the list.
+      if (e.target.closest && e.target.closest('.article-back')) { showNewsList(); return; }
+      // Daily-news card → open the full article view.
+      const card = e.target.closest && e.target.closest('.dn-card[data-news-id]');
+      if (card) { openArticle(card.getAttribute('data-news-id')); return; }
       // Daily-news category sub-pills
       const f = e.target.closest && e.target.closest('.dn-filter');
       if (f) {
         Array.prototype.forEach.call(p.querySelectorAll('.dn-filter'), function (b) { b.classList.toggle('active', b === f); });
         renderNewsGrid(f.getAttribute('data-cat'));
       }
+    });
+
+    // Keyboard activation for news cards (role="button").
+    p.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest && e.target.closest('.dn-card[data-news-id]');
+      if (card) { e.preventDefault(); openArticle(card.getAttribute('data-news-id')); }
     });
 
     // ESC closes whichever room panel is open (matches the chart/popup modals).

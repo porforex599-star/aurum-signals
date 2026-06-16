@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+  Phase B.5 — static preview of the click-to-read article view.
+
+  Self-contained snapshot (no Supabase, no build step) of the markup + CSS that
+  room.html renders when a news card is clicked. Populated with one real
+  AI-generated row ("อัตราดอกเบี้ยอย่างเป็นทางการของธนาคารแห่งอังกฤษ"). Open in a
+  browser to see exactly what a customer sees. The hero image loads from
+  Unsplash when online; offline it falls back to the category icon (same
+  onerror path as production).
+-->
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurum · ตัวอย่างบทความข่าว (Phase B.5)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #0a0420; color: #f5e8c7; font-family: 'Sukhumvit Set','Noto Sans Thai',-apple-system,'Segoe UI',sans-serif; }
+  .stage { max-width: 760px; margin: 0 auto; padding: 24px 12px 60px; }
+  /* ---- copied verbatim from room.html (Phase B.5 article-view block) ---- */
+  .dn-cat-mon { color: #e7c66e; }
+  .room-panel-card { position: relative; margin: 10px 0 12px; background: linear-gradient(180deg, rgba(36,26,13,0.35), rgba(22,10,46,0.25)); border: 1px solid #2c1a4a; border-left: 3px solid #d4af37; border-radius: 14px; padding: 18px 18px 20px; }
+  .room-panel-close { position: absolute; top: 10px; right: 12px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 22px; line-height: 1; color: #c9b896; background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
+  .article-back { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #c9b896; background: rgba(212,175,55,0.05); border: 1px solid #2c1a4a; border-radius: 999px; padding: 6px 14px; cursor: pointer; margin-bottom: 16px; }
+  .article-view { max-width: 720px; }
+  .article-hero { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; border: 1px solid rgba(212,175,55,0.15); background: rgba(255,255,255,0.02); }
+  .article-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .article-hero-fallback { width: 100%; height: 100%; align-items: center; justify-content: center; }
+  .article-hero-fallback svg { width: 64px; height: 64px; }
+  .article-hero-fallback.dn-cat-mon { background: rgba(212,175,55,0.10); color: #e7c66e; }
+  .article-credit { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; color: rgba(255,255,255,0.78); padding: 5px 10px; background: linear-gradient(0deg, rgba(0,0,0,0.55), transparent); text-align: right; }
+  .article-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 6px; }
+  .article-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #c9b896; }
+  .article-category { font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: rgba(212,175,55,0.10); color: #e7c66e; border: 1px solid rgba(212,175,55,0.28); }
+  .article-impact { font-size: 10px; padding: 2px 9px; border-radius: 999px; border: 1px solid transparent; }
+  .article-impact.high { background: rgba(226,75,74,0.14); color: #f0908f; border-color: rgba(226,75,74,0.40); }
+  .article-title { font-family: 'Instrument Serif','Cormorant Garamond',Georgia,serif; color: #f5e8c7; font-size: 26px; font-weight: 400; line-height: 1.25; margin: 8px 0 4px; }
+  .article-section { margin-top: 22px; }
+  .article-section h2 { font-family: 'Instrument Serif','Cormorant Garamond',Georgia,serif; font-style: italic; color: #e7c66e; font-size: 22px; font-weight: 400; margin: 28px 0 8px; }
+  .article-section p { font-size: 15px; line-height: 1.7; color: #ddd2ee; margin: 0; }
+  .article-section ul { list-style: none; padding-left: 24px; margin: 6px 0 0; }
+  .article-section li { position: relative; font-size: 15px; line-height: 1.7; color: #ddd2ee; margin-bottom: 6px; }
+  .article-section li::before { content: ''; position: absolute; left: -18px; top: 11px; width: 7px; height: 7px; border-radius: 999px; background: #d4af37; }
+  .article-source { margin-top: 26px; padding-top: 14px; border-top: 1px solid #2c1a4a; font-size: 12px; color: #7a6f99; }
+  @media (max-width: 767px) {
+    .article-hero { aspect-ratio: 4 / 3; }
+    .article-section p, .article-section li { font-size: 14px; }
+    .article-title { font-size: 22px; }
+    .article-section h2 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="room-panel-card">
+      <button class="room-panel-close" type="button" aria-label="ปิด">&times;</button>
+      <div class="article-view">
+        <button class="article-back" type="button">← กลับ</button>
+        <div class="article-hero">
+          <img class="article-hero-img"
+               src="https://images.unsplash.com/photo-1725726009991-ae536f6fb8be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080&q=80"
+               alt="อัตราดอกเบี้ยอย่างเป็นทางการของธนาคารแห่งอังกฤษ"
+               onerror="this.style.display='none';var f=this.parentNode.querySelector('.article-hero-fallback');if(f)f.style.display='flex';">
+          <div class="article-hero-fallback dn-cat-mon" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M4 10v9h16v-9"/><path d="M8 19v-6M12 19v-6M16 19v-6"/><path d="M3 21h18"/></svg>
+          </div>
+          <div class="article-credit">Photo by Annie Spratt on Unsplash</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-time">22:00</span>
+          <span class="article-category">นโยบายเงิน</span>
+          <span class="article-impact high">ผลกระทบสูง</span>
+        </div>
+        <h1 class="article-title">อัตราดอกเบี้ยอย่างเป็นทางการของธนาคารแห่งอังกฤษ</h1>
+        <section class="article-section">
+          <h2>ความเป็นมา</h2>
+          <p>ธนาคารแห่งอังกฤษ (Bank of England) กำหนดอัตราดอกเบี้ยนโยบายอย่างเป็นทางการในการประชุมครั้งล่าสุด โดยคาดการณ์ว่าจะคงอัตราดอกเบี้ยไว้ที่ระดับ 3.75% เท่ากับครั้งก่อนหน้า การตัดสินใจนี้สะท้อนถึงทิศทางนโยบายการเงินของธนาคารกลางสหราชอาณาจักรในการรักษาเสถียรภาพเศรษฐกิจและควบคุมอัตราเงินเฟ้อ</p>
+        </section>
+        <section class="article-section">
+          <h2>ผลกระทบต่อทอง XAUUSD</h2>
+          <p>หากธนาคารแห่งอังกฤษคงอัตราดอกเบี้ยไว้ตามที่คาดการณ์ ผลกระทบต่อราคาทองคำอาจมีความผันผวนจำกัด เนื่องจากตลาดได้คาดการณ์และปรับฐานไปแล้ว อย่างไรก็ตาม หากมีการเปลี่ยนแปลงจากที่คาดการณ์หรือมีแถลงการณ์ที่เข้มงวดหรือผ่อนคลายกว่าที่คาด อาจส่งผลต่อค่าเงินปอนด์และดอลลาร์สหรัฐ ซึ่งจะมีผลกระทบต่อแนวโน้มของราคาทองคำในตลาดโลก การคงอัตราดอกเบี้ยในระดับสูงมักสนับสนุนค่าเงิน แต่อาจกดดันสินทรัพย์ปลอดภัยอย่างทองคำในระยะสั้น ขณะที่ความไม่แน่นอนทางเศรษฐกิจอาจเพิ่มแรงหนุนให้นักลงทุนหันมาถือครองทองคำเพื่อป้องกันความเสี่ยง</p>
+        </section>
+        <section class="article-section">
+          <h2>จุดที่ต้องจับตา</h2>
+          <ul>
+            <li>ติดตามแถลงการณ์และการประเมินเศรษฐกิจจากธนาคารแห่งอังกฤษหลังการประชุม</li>
+            <li>สังเกตความเคลื่อนไหวของค่าเงินปอนด์สเตอร์ลิงต่อดอลลาร์สหรัฐ</li>
+            <li>วิเคราะห์ทิศทางนโยบายการเงินของธนาคารกลางหลักในตลาดโลกควบคู่กัน</li>
+          </ul>
+        </section>
+        <div class="article-source">ที่มา: ForexFactory</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
