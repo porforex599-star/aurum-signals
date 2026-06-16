@@ -2,13 +2,27 @@
 // AURUM AI — Edge Function: scheduled-analyzer
 //
 // Project: aurum-customers (etwlurpjrqlvrxgsbhkd)
-// Phase B.4 (2026-06-16)
+// Phase B.4 (2026-06-16) · Phase B.4.2 webhook + chart-img path (2026-06-16)
 //
 // Posts a structured Thai XAUUSD market briefing into analysis_posts three
-// times a day (morning / afternoon / evening, Asia/Bangkok). Driven by three
-// pg_cron jobs that each POST {"slot":"morning|afternoon|evening"}; a manual
-// invoke can pass the same body, or omit it to derive the slot from the
-// current Bangkok hour.
+// times a day (morning / afternoon / evening, Asia/Bangkok). Two invocation
+// shapes feed the same Claude briefing path:
+//   - cron:    three pg_cron jobs POST {"slot":"morning|afternoon|evening"}.
+//   - webhook: a Pine V.2 time-triggered TradingView alert POSTs
+//              {"type":"briefing_webhook","slot":...,"chart_image_url":...}
+//              (kept future-proof, no longer the primary path).
+//
+// AURUM chart (Phase B.4.2 Part 2 — PRIMARY): every briefing gets a real chart
+// with the AURUM Pine V.2 indicators. A webhook-supplied chart_image_url wins;
+// otherwise the function renders Por's saved TradingView layout (uoSX32t7) via
+// chart-img.com, uploads the PNG to the public `analysis-snapshots` bucket, and
+// stores that URL — so /room shows the proper chart even on the cron path. If
+// chart generation is unavailable (no CHART_IMG_API_KEY / API error) it fails
+// soft: the briefing still posts, chart_image_url NULL → placeholder.
+//
+// A manual invoke can pass either body, or omit it to derive the slot from the
+// current Bangkok hour. The idempotency guard means whichever path fires first
+// for a given slot/day wins and the other is skipped — no double-post.
 //
 // Per run:
 //   1. Resolve the slot (body.slot → else current Bangkok hour bucket).
@@ -38,9 +52,12 @@
 // Secrets:
 //   - ANTHROPIC_API_KEY           (existing — Claude Sonnet writer)
 //   - SUPABASE_URL                (auto-injected)
-//   - SUPABASE_SERVICE_ROLE_KEY   (auto-injected)
+//   - SUPABASE_SERVICE_ROLE_KEY   (auto-injected — storage upload + insert)
 //   - TELEGRAM_BOT_TOKEN          (existing — failure alerts)
 //   - TELEGRAM_CHAT_ID            (existing — admin failure alerts; STAFF_APPROVAL_CHAT_ID fallback)
+//   - CHART_IMG_API_KEY           (NEW — chart-img.com AURUM chart; absent → chart skipped, soft)
+//   - CHART_IMG_LAYOUT_ID         (optional — defaults to uoSX32t7)
+//   - CHART_IMG_SYMBOL/INTERVAL   (optional — default OANDA:XAUUSD / 15)
 // =====================================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -69,6 +86,14 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID") || Deno.env.get("STAFF_APPROVAL_CHAT_ID") || "";
+
+// chart-img.com — render Por's saved TradingView layout (AURUM Pine V.2
+// indicators baked in) into a PNG, upload to Supabase Storage, store the URL.
+const CHART_IMG_API_KEY = Deno.env.get("CHART_IMG_API_KEY") ?? "";
+const CHART_IMG_LAYOUT_ID = Deno.env.get("CHART_IMG_LAYOUT_ID") || "uoSX32t7";
+const CHART_IMG_SYMBOL = Deno.env.get("CHART_IMG_SYMBOL") || "OANDA:XAUUSD";
+const CHART_IMG_INTERVAL = Deno.env.get("CHART_IMG_INTERVAL") || "15";
+const CHART_SNAPSHOT_BUCKET = "analysis-snapshots"; // public bucket; same one Pine/admin charts use
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000; // Asia/Bangkok is fixed UTC+7 (no DST).
@@ -262,6 +287,68 @@ function composeNote(b: Briefing): string {
 }
 
 // ---------------------------------------------------------------------
+// AURUM chart — render Por's saved TradingView layout (uoSX32t7), which has the
+// AURUM Pine V.2 indicators (EMA white/green/yellow/red · 3s-Bear/Bull markers ·
+// S/D zones · gold areas) baked in, via chart-img.com → PNG → Supabase Storage.
+//
+// The layout-chart endpoint (not advanced-chart) is what carries the saved
+// layout's custom Pine studies. We upload the PNG to our own public
+// `analysis-snapshots` bucket (same one Pine/admin charts use) so the URL never
+// expires and /room renders it through the existing <img> path. Fails soft:
+// any missing key / API / upload error logs and returns null → the briefing is
+// still posted, just with the "รอข้อมูลแท่งเทียน" placeholder.
+// ---------------------------------------------------------------------
+async function generateAurumChart(sb: SupabaseClient, slot: Slot): Promise<string | null> {
+  if (!CHART_IMG_API_KEY) {
+    console.warn("[scheduled-analyzer] CHART_IMG_API_KEY not set — skipping chart generation");
+    return null;
+  }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 60000); // chart-img recommends ≥60s
+    let res: Response;
+    try {
+      res = await fetch(`https://api.chart-img.com/v2/tradingview/layout-chart/${CHART_IMG_LAYOUT_ID}`, {
+        method: "POST",
+        headers: { "x-api-key": CHART_IMG_API_KEY, "content-type": "application/json" },
+        body: JSON.stringify({
+          symbol: CHART_IMG_SYMBOL,
+          interval: CHART_IMG_INTERVAL,
+          theme: "dark",
+          width: 1280,
+          height: 720,
+        }),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) {
+      console.warn(`[scheduled-analyzer] chart-img ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      return null;
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.byteLength === 0) {
+      console.warn("[scheduled-analyzer] chart-img returned an empty body");
+      return null;
+    }
+    const path = `briefing-${slot}-${crypto.randomUUID()}.png`;
+    const { error: upErr } = await sb.storage
+      .from(CHART_SNAPSHOT_BUCKET)
+      .upload(path, bytes, { contentType: "image/png", upsert: false });
+    if (upErr) {
+      console.warn("[scheduled-analyzer] storage upload failed:", upErr.message);
+      return null;
+    }
+    const { data } = sb.storage.from(CHART_SNAPSHOT_BUCKET).getPublicUrl(path);
+    return data?.publicUrl ?? null;
+  } catch (e) {
+    console.warn("[scheduled-analyzer] chart generation error:", String(e));
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------
 // Failure-state bookkeeping (admin Telegram alert after 3 consecutive fails)
 // ---------------------------------------------------------------------
 async function sendTelegram(text: string): Promise<void> {
@@ -302,7 +389,7 @@ async function recordFailure(sb: SupabaseClient, err: string): Promise<void> {
 // ---------------------------------------------------------------------
 // Main run
 // ---------------------------------------------------------------------
-async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
+async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date, chartImageUrl: string | null = null) {
   const dayStart = bangkokDayStartUtcIso(now);
 
   // 1. Idempotency — has this slot already posted today (Bangkok)?
@@ -349,7 +436,14 @@ async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
     throw new Error(`briefing_banned_vocab: ${banned}`);
   }
 
-  // 5. Insert. NOT-NULL chart columns get briefing-appropriate fills:
+  // 5. Chart. A webhook-supplied screenshot URL wins (Pine V.2 path, kept
+  //    future-proof); otherwise render Por's AURUM TradingView layout via
+  //    chart-img.com. Either may resolve to null → /room shows the
+  //    "รอข้อมูลแท่งเทียน" placeholder. Done after the briefing succeeds so a
+  //    skipped/failed run never spends a chart-img credit.
+  const chartUrl = chartImageUrl ?? (await generateAurumChart(sb, slot));
+
+  // 6. Insert. NOT-NULL chart columns get briefing-appropriate fills:
   //    key_level=0 (no price level for a briefing), confidence=70,
   //    risk_level derived from whether high-impact news is on the docket.
   const riskLevel = news.some((n) => n.impact === "high") ? "high" : "medium";
@@ -367,6 +461,8 @@ async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
       note,
       source: "ai_scheduled",
       schedule_slot: slot,
+      chart_image_url: chartUrl,
+      chart_image_generated_at: chartUrl ? new Date().toISOString() : null,
     })
     .select("id, created_at")
     .single();
@@ -379,6 +475,8 @@ async function runAnalyze(sb: SupabaseClient, slot: Slot, now: Date) {
     title: briefing.title,
     bias: briefing.bias,
     risk_level: riskLevel,
+    chart_image_url: chartUrl,
+    chart_source: chartImageUrl ? "webhook" : (chartUrl ? "chart-img" : "none"),
     context: { pine_posts: pine.length, news_items: news.length },
   };
 }
@@ -392,22 +490,37 @@ serve(async (req) => {
   }
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-  // Resolve slot: explicit body.slot wins, else derive from Bangkok hour.
+  // Resolve invocation. Two POST shapes, one Claude path:
+  //   - cron:    {"slot":"morning|afternoon|evening"}  → no chart screenshot.
+  //   - webhook: {"type":"briefing_webhook","slot":...,"chart_image_url":...}
+  //              fired by a Pine V.2 time-triggered TradingView alert, carrying
+  //              the AURUM-indicator chart screenshot.
+  // Either way the slot resolves the same (explicit body.slot wins, else the
+  // current Bangkok hour bucket) and the same idempotency guard prevents a
+  // cron+webhook double-post for one slot/day.
   const now = new Date();
   let slot: Slot = currentSlot(now);
+  let chartImageUrl: string | null = null;
+  let isWebhook = false;
   try {
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}));
       const s = body?.slot;
       if (s === "morning" || s === "afternoon" || s === "evening") slot = s;
+      if (body?.type === "briefing_webhook") {
+        isWebhook = true;
+        const url = typeof body?.chart_image_url === "string" ? body.chart_image_url.trim() : "";
+        // Only accept an http(s) URL; ignore unsubstituted {{chart}} placeholders.
+        if (/^https?:\/\//i.test(url)) chartImageUrl = url;
+      }
     }
   } catch (_) { /* keep derived slot */ }
 
   try {
-    const result = await runAnalyze(sb, slot, now);
+    const result = await runAnalyze(sb, slot, now, chartImageUrl);
     await recordSuccess(sb);
-    console.log("[scheduled-analyzer] ok", JSON.stringify(result));
-    return json({ ok: true, ...result });
+    console.log("[scheduled-analyzer] ok", JSON.stringify({ via: isWebhook ? "webhook" : "cron", ...result }));
+    return json({ ok: true, via: isWebhook ? "webhook" : "cron", ...result });
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e);
     console.error("[scheduled-analyzer] run failed:", msg);
