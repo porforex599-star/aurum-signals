@@ -1881,7 +1881,7 @@ function buildDetailShell() {
           <div id="chart-empty" class="hidden w-full h-[320px] sm:h-[480px] rounded-xl border border-line items-center justify-center text-sm text-t3">รอข้อมูลแท่งเทียน</div>
           <span id="inline-chart-hint" class="chart-inline-hint hidden">🔍 คลิกเพื่อขยาย</span>
         </div>
-        <p class="text-[10px] text-t3 mt-1 text-right">ภาพจาก TradingView</p>
+        <p id="inline-chart-credit" class="text-[10px] text-t3 mt-1 text-right hidden">ภาพจาก TradingView</p>
       </div>
       <div id="d-bottom"></div>
     </div>`;
@@ -2421,19 +2421,29 @@ function handleChartImageUpdate(row) {
    is no candle/overlay computation here. Posts without an image are filtered out
    of the feed, but the empty fallback is kept for safety. */
 function renderInlineChart(p) {
-  const img   = document.getElementById('inline-chart-img');
-  const empty = document.getElementById('chart-empty');
-  const hint  = document.getElementById('inline-chart-hint');
+  const img    = document.getElementById('inline-chart-img');
+  const empty  = document.getElementById('chart-empty');
+  const hint   = document.getElementById('inline-chart-hint');
+  const credit = document.getElementById('inline-chart-credit');
   if (!img) return;
   if (hasChartImage(p)) {
     if (img.getAttribute('src') !== p.chartImageUrl) img.src = p.chartImageUrl;
+    // AI briefings carry an AURUM-indicator PNG (chart-img.com · TV layout uoSX32t7),
+    // not a generic TradingView snapshot — label it accordingly.
+    const isBriefing = p && p.source === 'ai_scheduled';
+    img.alt = isBriefing ? 'ภาพ chart บทวิเคราะห์ AURUM AI' : 'ภาพ chart การวิเคราะห์';
     img.classList.remove('hidden');
     if (hint) hint.classList.remove('hidden');
+    if (credit) {
+      credit.textContent = isBriefing ? 'ภาพจาก AURUM AI · 15m' : 'ภาพจาก TradingView';
+      credit.classList.remove('hidden');
+    }
     if (empty) { empty.classList.add('hidden'); empty.classList.remove('flex'); }
   } else {
     img.classList.add('hidden');
     img.removeAttribute('src');
     if (hint) hint.classList.add('hidden');
+    if (credit) credit.classList.add('hidden');
     if (empty) { empty.classList.remove('hidden'); empty.classList.add('flex'); }
   }
 }
