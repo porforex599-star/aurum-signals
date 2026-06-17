@@ -356,7 +356,11 @@ Deno.serve(async (req) => {
   // Env
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
   const chartImgKey = Deno.env.get("CHART_IMG_API_KEY");
-  const layoutId = Deno.env.get("CHART_IMG_LAYOUT_ID");
+  // The TradingView layout id is NOT a secret — it is the public chart slug
+  // (tradingview.com/chart/uoSX32t7). Prefer the env override, fall back to the
+  // known default so the pipeline never blocks on a mis-saved dashboard secret.
+  const layoutEnv = Deno.env.get("CHART_IMG_LAYOUT_ID");
+  const layoutId = layoutEnv || "uoSX32t7";
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -368,7 +372,7 @@ Deno.serve(async (req) => {
       present: {
         ANTHROPIC_API_KEY: !!anthropicKey,
         CHART_IMG_API_KEY: !!chartImgKey,
-        CHART_IMG_LAYOUT_ID: !!layoutId,
+        CHART_IMG_LAYOUT_ID_env: !!layoutEnv,
         SUPABASE_URL: !!supabaseUrl,
         SUPABASE_SERVICE_ROLE_KEY: !!supabaseKey
       }
