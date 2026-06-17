@@ -3387,20 +3387,22 @@ window.AurumGoldTV = (function () {
   let currentArticleId = null; // row id open in the article view (null in list)
   let newsScrollY = 0;        // saved list scroll, restored on back
 
-  /* Pull the freshest <=4 high-importance items from the last 24h. Reuses the
-     page's existing anon feed client (RLS allows anon SELECT on daily_news).
+  /* Pull the next <=4 upcoming high-importance items. Reuses the page's
+     existing anon feed client (RLS allows anon SELECT on daily_news).
+     Events whose published_at has already passed are hidden, and the
+     soonest upcoming event sits at the top (the backend news-fetcher
+     already policies the 24h window, so no upper bound is needed here).
      On any error, falls back silently to the Phase A mock (no user-facing
      error); an empty result is a valid "no news today" state, not an error. */
   async function fetchDailyNews() {
     const client = (typeof getFeedClient === 'function') ? getFeedClient() : null;
     if (!client) return DAILY_NEWS_FALLBACK;
     try {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await client
         .from('daily_news')
-        .select('*')
-        .gte('published_at', since)
-        .order('published_at', { ascending: false })
+        .select('id, title, impact, category, published_at, source, article, image_url')
+        .gte('published_at', new Date().toISOString())  // hide events that already passed
+        .order('published_at', { ascending: true })     // soonest first
         .limit(4);
       if (error) throw error;
       return (data || []).map(function (n) {
