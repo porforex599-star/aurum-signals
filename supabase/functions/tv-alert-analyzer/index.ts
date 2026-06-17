@@ -12,18 +12,21 @@
 //   7. Write analysis_json + chart_image_url to analysis_posts
 //
 // Env required (Supabase secrets):
-//   ANTHROPIC_API_KEY        · already set
-//   CHART_IMG_API_KEY        · chart-img.com API key
-//   CHART_IMG_LAYOUT_ID      · TradingView layout id (e.g. uoSX32t7)
-//   SUPABASE_URL             · auto
+//   ANTHROPIC_API_KEY         · already set
+//   CHART_IMG_API_KEY         · chart-img.com API key
+//   CHART_IMG_LAYOUT_ID       · TradingView layout id (e.g. uoSX32t7)
+//   SUPABASE_URL              · auto
 //   SUPABASE_SERVICE_ROLE_KEY · auto
+//
+// NOTE: uses the Anthropic REST API directly (x-api-key + anthropic-version),
+// matching the codebase convention (news-article-generator / scheduled-analyzer).
 
-import Anthropic from "npm:@anthropic-ai/sdk@0.34.0";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ---------- Config ----------
 
 const MODEL = "claude-sonnet-4-6";
+const ANTHROPIC_VERSION = "2023-06-01";
 const MAX_ATTEMPTS = 3;
 const MIN_INDICATOR_REFS = 3;
 
@@ -120,9 +123,7 @@ interface ValidationResult {
 function validate(json: any): ValidationResult {
   const required = ["direction", "direction_label", "trend", "position_in_range", "zone_a", "zone_b", "outlook"];
   for (const k of required) {
-    if (!(k in json) || typeof json[k] !== "string" && k !== "direction" && k !== "direction_label") {
-      if (!(k in json)) return { ok: false, reason: `missing_field:${k}` };
-    }
+    if (!(k in json)) return { ok: false, reason: `missing_field:${k}` };
   }
   if (!["bull", "bear"].includes(json.direction)) {
     return { ok: false, reason: `invalid_direction:${json.direction}` };
@@ -190,7 +191,7 @@ function timeframeToInterval(tf: string): string {
   throw new Error(`unsupported_timeframe:${tf}`);
 }
 
-// ---------- Claude call with retry loop ----------
+// ---------- Claude call with retry loop (REST API) ----------
 
 interface GenerateResult {
   ok: boolean;
@@ -200,12 +201,49 @@ interface GenerateResult {
   retry_reasons: string[];
 }
 
+interface ClaudeMessage {
+  role: "user" | "assistant";
+  content: any;
+}
+
+async function callClaude(
+  apiKey: string,
+  messages: ClaudeMessage[]
+): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        messages
+      })
+    });
+  } catch (e: any) {
+    return { ok: false, error: `fetch_failed:${e.message}` };
+  }
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 300);
+    return { ok: false, error: `http_${res.status}:${detail}` };
+  }
+  const data = await res.json();
+  const text: string = data?.content?.find((b: any) => b.type === "text")?.text ?? "";
+  return { ok: true, text };
+}
+
 async function generateAnalysis(
-  client: Anthropic,
+  apiKey: string,
   chartImageUrl: string,
   pinePayload: any
 ): Promise<GenerateResult> {
-  const messages: any[] = [];
+  const messages: ClaudeMessage[] = [];
   const retryReasons: string[] = [];
 
   // Initial user turn: chart image + Pine context
@@ -226,25 +264,17 @@ ${JSON.stringify(pinePayload, null, 2)}
   });
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    let response;
-    try {
-      response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages
-      });
-    } catch (e: any) {
-      retryReasons.push(`api_error:${e.message}`);
-      return { ok: false, attempts: attempt, fail_reason: `api_error:${e.message}`, retry_reasons: retryReasons };
+    const call = await callClaude(apiKey, messages);
+    if (!call.ok) {
+      retryReasons.push(`api_error:${call.error}`);
+      return { ok: false, attempts: attempt, fail_reason: `api_error:${call.error}`, retry_reasons: retryReasons };
     }
 
-    const textBlock = response.content.find((b: any) => b.type === "text");
-    if (!textBlock) {
+    const raw = call.text.trim();
+    if (!raw) {
       retryReasons.push("no_text_block");
       continue;
     }
-    const raw = (textBlock as any).text.trim();
     const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
 
     let parsed: any;
@@ -398,8 +428,7 @@ Deno.serve(async (req) => {
   const postId = inserted.id;
 
   // Generate
-  const client = new Anthropic({ apiKey: anthropicKey });
-  const result = await generateAnalysis(client, chartImageUrl, pineContext);
+  const result = await generateAnalysis(anthropicKey, chartImageUrl, pineContext);
 
   // Telemetry
   await supabase.from("analysis_telemetry").insert({
