@@ -1,0 +1,357 @@
+<!--
+  Aurum Analysis · room.html analysis card fragment
+
+  Drop this into the right-panel detail container of /room
+  Pass the post object as `data-post` JSON; renderAnalysisCard() picks it up.
+
+  Requires: Tabler icons font already loaded in room.html
+-->
+
+<style>
+  .ac-root {
+    background: #0d0a17;
+    border-radius: 12px;
+    padding: 18px;
+    color: #e8e6f0;
+    font-family: var(--font-sans, system-ui, sans-serif);
+  }
+
+  .ac-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(212, 168, 87, 0.18);
+    margin-bottom: 14px;
+  }
+  .ac-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .ac-symbol { font-size: 17px; font-weight: 500; color: #e8e6f0; }
+  .ac-tf {
+    font-size: 11px;
+    color: #cfcde0;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .ac-level-badge {
+    background: #d4a857;
+    color: #0d0a17;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .ac-meta { margin: 0; font-size: 11px; color: #7a7590; }
+  .ac-stars { color: #d4a857; font-size: 12px; white-space: nowrap; }
+
+  .ac-direction {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .ac-direction-arrow { font-size: 22px; line-height: 1; }
+  .ac-direction-label { font-size: 16px; font-weight: 500; }
+  .ac-direction.bull .ac-direction-arrow,
+  .ac-direction.bull .ac-direction-label { color: #5fde9f; }
+  .ac-direction.bear .ac-direction-arrow,
+  .ac-direction.bear .ac-direction-label { color: #e87171; }
+  .ac-source {
+    margin-left: auto;
+    font-size: 11px;
+    color: #7a7590;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ac-chart {
+    background: #0a0612;
+    border-radius: 8px;
+    border: 1px solid rgba(212, 168, 87, 0.18);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .ac-chart-header,
+  .ac-chart-footer {
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    color: #7a7590;
+  }
+  .ac-chart-header { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+  .ac-chart-footer { background: rgba(212, 168, 87, 0.06); }
+  .ac-chart-dot { color: #5fde9f; }
+  .ac-chart-tag { color: #d4a857; }
+  .ac-chart img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .ac-chart-fallback {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7a7590;
+    font-size: 12px;
+  }
+
+  .ac-section { margin-bottom: 14px; }
+  .ac-section-highlight {
+    padding: 12px 14px;
+    background: rgba(212, 168, 87, 0.07);
+    border-radius: 8px;
+    border: 1px solid rgba(212, 168, 87, 0.2);
+  }
+  .ac-section-title {
+    margin: 0 0 6px;
+    font-size: 10px;
+    color: #d4a857;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .ac-section-title i {
+    font-size: 14px;
+    vertical-align: -2px;
+    margin-right: 4px;
+  }
+  .ac-section-body {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: #cfcde0;
+  }
+
+  .ac-zones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .ac-zone {
+    padding: 10px 12px;
+    border-radius: 4px;
+  }
+  .ac-zone-a {
+    background: rgba(95, 222, 159, 0.07);
+    border-left: 2px solid #5fde9f;
+  }
+  .ac-zone-b {
+    background: rgba(232, 113, 113, 0.07);
+    border-left: 2px solid #e87171;
+  }
+  .ac-zone-label {
+    margin: 0 0 3px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .ac-zone-a .ac-zone-label { color: #5fde9f; }
+  .ac-zone-b .ac-zone-label { color: #e87171; }
+  .ac-zone-body {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.55;
+    color: #cfcde0;
+  }
+
+  .ac-disclaimer {
+    margin-top: 16px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .ac-disclaimer i {
+    font-size: 14px;
+    color: #7a7590;
+    margin-top: 2px;
+  }
+  .ac-disclaimer p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #7a7590;
+  }
+  .ac-disclaimer strong { color: #d4a857; font-weight: 500; }
+
+  /* indicator reference colors (Claude wraps these in <span class="ind-X">) */
+  .ind-L0 { color: #ffffff; font-weight: 500; }
+  .ind-L1 { color: #ffd47a; font-weight: 500; }
+  .ind-L4 { color: #e87171; font-weight: 500; }
+  .ind-zone-a { color: #5fde9f; font-weight: 500; }
+  .ind-zone-b { color: #e87171; font-weight: 500; }
+  .ind-bull { color: #5fde9f; font-weight: 500; }
+  .ind-bear { color: #e87171; font-weight: 500; }
+</style>
+
+<article class="ac-root" id="ac-root">
+  <!-- populated by renderAnalysisCard() -->
+</article>
+
+<script>
+/**
+ * Render an analysis card from a post row.
+ *
+ * @param {Object} post - row from analysis_posts table
+ *   Required fields:
+ *     - timeframe: "M5" | "M15"
+ *     - arrow_level: 1 | 2 | 3
+ *     - session_label: "ช่วงเช้า" | "ช่วงบ่าย" | "ช่วงค่ำ"
+ *     - published_at: ISO string
+ *     - chart_image_url: string (chart-img.com PNG URL)
+ *     - analysis_json: { direction, direction_label, trend, position_in_range, zone_a, zone_b, outlook }
+ */
+function renderAnalysisCard(post) {
+  const root = document.getElementById('ac-root');
+  if (!post || !post.analysis_json) {
+    root.innerHTML = '<p style="text-align:center;color:#7a7590;font-size:12px;padding:24px;">รอข้อมูลแท่งเทียน</p>';
+    return;
+  }
+
+  const a = post.analysis_json;
+  const dir = a.direction === 'bull' ? 'bull' : 'bear';
+  const arrow = dir === 'bull' ? '▲▲' : '▼▼';
+  const relTime = relativeTimeTH(post.published_at);
+  const tsBkk = formatBkkTime(post.published_at);
+
+  // Auto-highlight indicator references in body text
+  const hi = highlightIndicators;
+
+  root.innerHTML = `
+    <header class="ac-header">
+      <div>
+        <div class="ac-title-row">
+          <span class="ac-symbol">XAUUSD</span>
+          <span class="ac-tf">${escapeHtml(post.timeframe)}</span>
+          <span class="ac-level-badge">ระดับ 3 · จุดยืนยันสำคัญสูงสุด</span>
+        </div>
+        <p class="ac-meta">บทวิเคราะห์ · AI · ${escapeHtml(post.session_label || '')} · ${relTime}</p>
+      </div>
+      <span class="ac-stars">★★★★★</span>
+    </header>
+
+    <div class="ac-direction ${dir}">
+      <span class="ac-direction-arrow">${arrow}</span>
+      <span class="ac-direction-label">${escapeHtml(a.direction_label)}</span>
+      <span class="ac-source"><i class="ti ti-chart-candle"></i>อิงจาก Aurum Gold V2.1.1</span>
+    </div>
+
+    <div class="ac-chart">
+      <div class="ac-chart-header">
+        <span><span class="ac-chart-dot">●</span> Gold Spot / U.S. Dollar · ${escapeHtml(post.timeframe)} · OANDA</span>
+        <span class="ac-chart-tag">Aurum Gold V2.1.1</span>
+      </div>
+      ${post.chart_image_url
+        ? `<img src="${escapeAttr(post.chart_image_url)}" alt="XAUUSD ${escapeAttr(post.timeframe)} chart" loading="lazy" onerror="this.outerHTML='<div class=\\'ac-chart-fallback\\'>chart โหลดไม่สำเร็จ · ดูที่ TradingView</div>'" />`
+        : `<div class="ac-chart-fallback">รอ chart snapshot</div>`}
+      <div class="ac-chart-footer">
+        <span>Snapshot · chart-img.com</span>
+        <span>${tsBkk}</span>
+      </div>
+    </div>
+
+    <section class="ac-section">
+      <h3 class="ac-section-title"><i class="ti ti-trending-up"></i>แนวโน้มของราคา</h3>
+      <p class="ac-section-body">${hi(escapeHtml(a.trend))}</p>
+    </section>
+
+    <section class="ac-section ac-section-highlight">
+      <h3 class="ac-section-title"><i class="ti ti-map-pin"></i>ตำแหน่งราคาในกรอบ</h3>
+      <p class="ac-section-body">${hi(escapeHtml(a.position_in_range))}</p>
+    </section>
+
+    <section class="ac-section">
+      <h3 class="ac-section-title"><i class="ti ti-target"></i>โซนสำคัญที่ต้องจับตา</h3>
+      <div class="ac-zones">
+        <div class="ac-zone ac-zone-a">
+          <p class="ac-zone-label">Zone A · Demand</p>
+          <p class="ac-zone-body">${hi(escapeHtml(a.zone_a))}</p>
+        </div>
+        <div class="ac-zone ac-zone-b">
+          <p class="ac-zone-label">Zone B · Supply</p>
+          <p class="ac-zone-body">${hi(escapeHtml(a.zone_b))}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="ac-section">
+      <h3 class="ac-section-title"><i class="ti ti-eye"></i>มุมมองสรุป</h3>
+      <p class="ac-section-body">${hi(escapeHtml(a.outlook))}</p>
+    </section>
+
+    <footer class="ac-disclaimer">
+      <i class="ti ti-info-circle"></i>
+      <p>บทวิเคราะห์อ้างอิงจาก indicator <strong>Aurum Gold V2.1.1</strong> บน TradingView chart จริงเท่านั้น · ตัวเลขราคาให้พิจารณาจากกราฟด้วยตนเอง · ผู้ลงทุนใช้วิจารณญาณในการตัดสินใจ</p>
+    </footer>
+  `;
+}
+
+// Wrap indicator tokens in colored spans
+function highlightIndicators(text) {
+  const tokens = [
+    { re: /\bL0\b/g, cls: 'ind-L0' },
+    { re: /\bL1\b/g, cls: 'ind-L1' },
+    { re: /\bL2\b/g, cls: 'ind-L1' },
+    { re: /\bL3\b/g, cls: 'ind-L1' },
+    { re: /\bL4\b/g, cls: 'ind-L4' },
+    { re: /\bZone\sA\b/g, cls: 'ind-zone-a' },
+    { re: /\bZone\sB\b/g, cls: 'ind-zone-b' },
+    { re: /3s-Bull/g, cls: 'ind-bull' },
+    { re: /3s-Bear/g, cls: 'ind-bear' },
+    { re: /▲▲/g, cls: 'ind-bull' },
+    { re: /▼▼/g, cls: 'ind-bear' }
+  ];
+  for (const t of tokens) {
+    text = text.replace(t.re, (m) => `<span class="${t.cls}">${m}</span>`);
+  }
+  return text;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+function relativeTimeTH(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'เพิ่งโพสต์';
+  if (mins < 60) return `${mins} นาที ที่แล้ว`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} ชม. ที่แล้ว`;
+  const days = Math.floor(hrs / 24);
+  return `${days} วันที่แล้ว`;
+}
+
+function formatBkkTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const bkk = new Date(d.getTime() + 7 * 3600 * 1000);
+  const dd = String(bkk.getUTCDate()).padStart(2, '0');
+  const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const mm = months[bkk.getUTCMonth()];
+  const yy = bkk.getUTCFullYear() + 543;
+  const hh = String(bkk.getUTCHours()).padStart(2, '0');
+  const mi = String(bkk.getUTCMinutes()).padStart(2, '0');
+  return `${dd} ${mm} ${yy} · ${hh}:${mi} BKK`;
+}
+
+// Expose globally
+window.renderAnalysisCard = renderAnalysisCard;
+</script>
