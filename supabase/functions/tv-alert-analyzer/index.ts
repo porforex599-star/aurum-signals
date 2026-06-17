@@ -5,21 +5,25 @@
 // Pipeline:
 //   1. Receive TradingView webhook payload (Pine alert from Aurum Gold V2.1.1)
 //   2. Filter: only arrow_level === 3 (M5 or M15) → proceed; else skip
-//   3. Build chart-img.com snapshot URL (using saved layout)
-//   4. Send chart PNG + Pine payload context to Claude Sonnet 4.6 (vision)
-//   5. Validate output (no price numbers · no banned vocab · ≥3 indicator refs)
-//   6. Retry up to 3x with feedback loop
-//   7. Write analysis_json + chart_image_url to analysis_posts
+//   3. Render chart-img.com snapshot of the saved TV layout (Aurum Gold V2.1.1
+//      baked in) via the SAME proven path as scheduled-analyzer:
+//        POST /v2/tradingview/layout-chart/{layoutId}
+//        headers: x-api-key + tradingview-session-id(+sign) for the private
+//        indicator · body hides UI chrome for IP protection
+//      → PNG bytes → upload to Supabase Storage (public URL for the room) and
+//      send the PNG to Claude as a base64 image (no reliance on Anthropic being
+//      able to fetch a header-authed chart-img URL).
+//   4. Claude Sonnet 4.6 (vision) writes the analysis JSON.
+//   5. Validate (no price numbers · no banned vocab · ≥3 indicator refs).
+//   6. Retry up to 3x with feedback loop.
+//   7. Write analysis_json + chart_image_url to analysis_posts.
 //
-// Env required (Supabase secrets):
-//   ANTHROPIC_API_KEY         · already set
-//   CHART_IMG_API_KEY         · chart-img.com API key
-//   CHART_IMG_LAYOUT_ID       · TradingView layout id (e.g. uoSX32t7)
-//   SUPABASE_URL              · auto
-//   SUPABASE_SERVICE_ROLE_KEY · auto
-//
-// NOTE: uses the Anthropic REST API directly (x-api-key + anthropic-version),
-// matching the codebase convention (news-article-generator / scheduled-analyzer).
+// Env (Supabase secrets):
+//   ANTHROPIC_API_KEY          · required
+//   CHART_IMG_API_KEY          · required (chart-img.com)
+//   CHART_IMG_LAYOUT_ID        · optional · defaults to public TV slug uoSX32t7
+//   TV_SESSION_ID / TV_SESSION_ID_SIGN · render the private Aurum indicator
+//   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY · auto
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -29,6 +33,9 @@ const MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_VERSION = "2023-06-01";
 const MAX_ATTEMPTS = 3;
 const MIN_INDICATOR_REFS = 3;
+
+const CHART_SNAPSHOT_BUCKET = "analysis-snapshots";
+const CHART_IMG_SYMBOL_DEFAULT = "OANDA:XAUUSD";
 
 const SYSTEM_PROMPT = `คุณคือ AI วิเคราะห์ทองคำ XAUUSD สำหรับลูกค้า AURUM ANALYSIS
 
@@ -99,7 +106,6 @@ function hasPriceNumber(text: string): string | null {
 function hasBannedVocab(text: string): string | null {
   const lower = text.toLowerCase();
   for (const word of BANNED_VOCAB) {
-    // word boundary check for short tokens to avoid false positives
     const re = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
     if (re.test(lower)) return word;
   }
@@ -161,37 +167,84 @@ function validate(json: any): ValidationResult {
   return { ok: true };
 }
 
-// ---------- chart-img.com URL builder ----------
-
-function buildChartImageUrl(opts: {
-  symbol: string;
-  interval: string; // "5" or "15" for chart-img
-  layoutId: string;
-  apiKey: string;
-}): string {
-  // chart-img.com v2 saved layout endpoint
-  // Returns PNG with the user's saved indicator setup baked in
-  const base = "https://api.chart-img.com/v2/tradingview/layout-chart";
-  const params = new URLSearchParams({
-    symbol: `OANDA:${opts.symbol}`,
-    interval: opts.interval,
-    width: "1280",
-    height: "720",
-    theme: "dark",
-    timezone: "Asia/Bangkok",
-    layout_id: opts.layoutId,
-    key: opts.apiKey
-  });
-  return `${base}?${params.toString()}`;
-}
+// ---------- chart-img.com (saved layout → PNG bytes) ----------
 
 function timeframeToInterval(tf: string): string {
-  if (tf === "M5" || tf === "5" || tf === "5m") return "5";
-  if (tf === "M15" || tf === "15" || tf === "15m") return "15";
+  if (tf === "M5" || tf === "5" || tf === "5m") return "5m";
+  if (tf === "M15" || tf === "15" || tf === "15m") return "15m";
   throw new Error(`unsupported_timeframe:${tf}`);
 }
 
-// ---------- Claude call with retry loop (REST API) ----------
+// UI chrome hidden for indicator IP protection (mirrors scheduled-analyzer v10).
+const CHART_DISABLED_FEATURES = [
+  "header_widget", "timeframes_toolbar", "header_chart_type", "header_settings",
+  "header_indicators", "header_compare", "header_undo_redo", "header_screenshot",
+  "header_fullscreen_button", "left_toolbar", "control_bar", "legend_widget",
+  "edit_buttons_in_legend", "study_buttons_in_legend", "main_series_scale_menu",
+  "context_menus"
+];
+
+async function fetchChartPng(opts: {
+  layoutId: string;
+  interval: string;
+  symbol: string;
+  apiKey: string;
+  tvSession: string;
+  tvSessionSign: string;
+}): Promise<{ ok: true; bytes: Uint8Array } | { ok: false; error: string }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60000);
+  const headers: Record<string, string> = {
+    "x-api-key": opts.apiKey,
+    "content-type": "application/json"
+  };
+  if (opts.tvSession) headers["tradingview-session-id"] = opts.tvSession;
+  if (opts.tvSessionSign) headers["tradingview-session-id-sign"] = opts.tvSessionSign;
+
+  let res: Response;
+  try {
+    res = await fetch(`https://api.chart-img.com/v2/tradingview/layout-chart/${opts.layoutId}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        symbol: opts.symbol,
+        interval: opts.interval,
+        theme: "dark",
+        width: 1280,
+        height: 720,
+        disabledFeatures: CHART_DISABLED_FEATURES,
+        hideLegend: true,
+        hideTopToolbar: true,
+        hideSideToolbar: true,
+        hideVolume: false
+      }),
+      signal: ctrl.signal
+    });
+  } catch (e: any) {
+    return { ok: false, error: `fetch:${String(e?.message ?? e).slice(0, 200)}` };
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 300);
+    return { ok: false, error: `chart-img ${res.status}:${detail}` };
+  }
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.byteLength === 0) return { ok: false, error: "chart-img empty body" };
+  return { ok: true, bytes };
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+// ---------- Claude call with retry loop (REST API, base64 image) ----------
 
 interface GenerateResult {
   ok: boolean;
@@ -219,12 +272,7 @@ async function callClaude(
         "anthropic-version": ANTHROPIC_VERSION,
         "content-type": "application/json"
       },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages
-      })
+      body: JSON.stringify({ model: MODEL, max_tokens: 1500, system: SYSTEM_PROMPT, messages })
     });
   } catch (e: any) {
     return { ok: false, error: `fetch_failed:${e.message}` };
@@ -240,17 +288,16 @@ async function callClaude(
 
 async function generateAnalysis(
   apiKey: string,
-  chartImageUrl: string,
+  imageBase64: string,
   pinePayload: any
 ): Promise<GenerateResult> {
   const messages: ClaudeMessage[] = [];
   const retryReasons: string[] = [];
 
-  // Initial user turn: chart image + Pine context
   messages.push({
     role: "user",
     content: [
-      { type: "image", source: { type: "url", url: chartImageUrl } },
+      { type: "image", source: { type: "base64", media_type: "image/png", data: imageBase64 } },
       {
         type: "text",
         text: `Pine alert payload (ใช้เป็น context เท่านั้น · ตัวเลขในนี้ห้ามนำออกมาแสดงในผลลัพธ์):
@@ -321,21 +368,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "invalid_json_body" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  // Expected body shape (from Pine alert webhook or upstream handler):
-  // {
-  //   symbol: "XAUUSD",
-  //   timeframe: "M5" | "M15",
-  //   arrow_level: 1 | 2 | 3,
-  //   arrow_direction: "bull" | "bear",
-  //   arrow_label: "3s-Bull" | "3s-Bear",
-  //   time: ISO string,
-  //   price: number,
-  //   zone_a: { active, touched },
-  //   zone_b: { active, touched },
-  //   lines: { L0, L1, L2, L3, L4 },
-  //   patterns: { P1, P2, P3, P4 }
-  // }
-
   const symbol = body.symbol || "XAUUSD";
   const timeframe = body.timeframe;
   const arrowLevel = body.arrow_level;
@@ -357,50 +389,44 @@ Deno.serve(async (req) => {
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
   const chartImgKey = Deno.env.get("CHART_IMG_API_KEY");
   // The TradingView layout id is NOT a secret — it is the public chart slug
-  // (tradingview.com/chart/uoSX32t7). Prefer the env override, fall back to the
-  // known default so the pipeline never blocks on a mis-saved dashboard secret.
-  const layoutEnv = Deno.env.get("CHART_IMG_LAYOUT_ID");
-  const layoutId = layoutEnv || "uoSX32t7";
+  // (tradingview.com/chart/uoSX32t7). Env override, else the known default.
+  const layoutId = Deno.env.get("CHART_IMG_LAYOUT_ID") || "uoSX32t7";
+  const tvSession = Deno.env.get("TV_SESSION_ID") ?? "";
+  const tvSessionSign = Deno.env.get("TV_SESSION_ID_SIGN") ?? "";
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!anthropicKey || !chartImgKey || !layoutId || !supabaseUrl || !supabaseKey) {
+  if (!anthropicKey || !chartImgKey || !supabaseUrl || !supabaseKey) {
     return new Response(JSON.stringify({
       error: "missing_env",
-      need: ["ANTHROPIC_API_KEY", "CHART_IMG_API_KEY", "CHART_IMG_LAYOUT_ID", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+      need: ["ANTHROPIC_API_KEY", "CHART_IMG_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
       // presence-only diagnostic (no secret values leaked)
       present: {
         ANTHROPIC_API_KEY: !!anthropicKey,
         CHART_IMG_API_KEY: !!chartImgKey,
-        CHART_IMG_LAYOUT_ID_env: !!layoutEnv,
+        CHART_IMG_LAYOUT_ID_env: !!Deno.env.get("CHART_IMG_LAYOUT_ID"),
+        TV_SESSION_ID: !!tvSession,
+        TV_SESSION_ID_SIGN: !!tvSessionSign,
         SUPABASE_URL: !!supabaseUrl,
         SUPABASE_SERVICE_ROLE_KEY: !!supabaseKey
       }
     }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
-  // Build chart-img URL
-  let chartImageUrl: string;
+  let interval: string;
   try {
-    chartImageUrl = buildChartImageUrl({
-      symbol,
-      interval: timeframeToInterval(timeframe),
-      layoutId,
-      apiKey: chartImgKey
-    });
+    interval = timeframeToInterval(timeframe);
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  // Build sanitized Pine context (strip raw numbers Claude doesn't need)
+  const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+
+  // Sanitized Pine context (raw numbers stripped — Claude must not echo prices)
   const pineContext = {
     symbol,
     timeframe,
-    arrow: {
-      level: arrowLevel,
-      direction: body.arrow_direction,
-      label: body.arrow_label
-    },
+    arrow: { level: arrowLevel, direction: body.arrow_direction, label: body.arrow_label },
     zone_a_touched: body.zone_a?.touched ?? false,
     zone_b_touched: body.zone_b?.touched ?? false,
     line_arrangement_bullish: (body.lines?.L0 ?? 0) > (body.lines?.L1 ?? 0),
@@ -413,10 +439,9 @@ Deno.serve(async (req) => {
     time_bkk: body.time
   };
 
-  // Insert pending row first → get post_id for telemetry
-  const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  // Insert pending row first → post_id anchors telemetry + lets the room show a
+  // "generating" card immediately.
   const sessionLabel = sessionLabelFromTime(body.time);
-
   const { data: inserted, error: insertErr } = await supabase
     .from("analysis_posts")
     .insert({
@@ -426,7 +451,6 @@ Deno.serve(async (req) => {
       arrow_level: arrowLevel,
       arrow_direction: body.arrow_direction,
       session_label: sessionLabel,
-      chart_image_url: chartImageUrl,
       analysis_status: "generating",
       pine_payload: body,
       published_at: body.time || new Date().toISOString()
@@ -439,15 +463,49 @@ Deno.serve(async (req) => {
   }
   const postId = inserted.id;
 
-  // Generate
-  const result = await generateAnalysis(anthropicKey, chartImageUrl, pineContext);
+  async function fail(failReason: string, httpStatus: number) {
+    await supabase.from("analysis_telemetry").insert({
+      post_id: postId, symbol, timeframe, arrow_level: arrowLevel,
+      status: "failed", attempts: 0, retry_reasons: [failReason], fail_reason: failReason
+    });
+    await supabase.from("analysis_posts").update({ analysis_status: "failed", fail_reason: failReason }).eq("id", postId);
+    return new Response(JSON.stringify({ ok: false, post_id: postId, fail_reason: failReason }), { status: httpStatus, headers: { "Content-Type": "application/json" } });
+  }
 
-  // Telemetry
+  // Render the chart (private indicator baked in) → PNG bytes
+  const chart = await fetchChartPng({
+    layoutId, interval, symbol: CHART_IMG_SYMBOL_DEFAULT,
+    apiKey: chartImgKey, tvSession, tvSessionSign
+  });
+  if (!chart.ok) {
+    return await fail(`chart_error:${chart.error}`, 502);
+  }
+
+  // Upload PNG → Supabase Storage (public URL for the room card)
+  let chartPublicUrl: string | null = null;
+  try {
+    const path = `arrow-${timeframe}-${crypto.randomUUID()}.png`;
+    const { error: upErr } = await supabase.storage
+      .from(CHART_SNAPSHOT_BUCKET)
+      .upload(path, chart.bytes, { contentType: "image/png", upsert: false });
+    if (!upErr) {
+      const { data: pub } = supabase.storage.from(CHART_SNAPSHOT_BUCKET).getPublicUrl(path);
+      chartPublicUrl = pub?.publicUrl ?? null;
+    }
+  } catch (_) { /* non-fatal — analysis can still run from the base64 image */ }
+
+  if (chartPublicUrl) {
+    await supabase.from("analysis_posts")
+      .update({ chart_image_url: chartPublicUrl, chart_image_generated_at: new Date().toISOString() })
+      .eq("id", postId);
+  }
+
+  // Generate (send the PNG as base64 — Anthropic can't header-auth chart-img)
+  const imageBase64 = bytesToBase64(chart.bytes);
+  const result = await generateAnalysis(anthropicKey, imageBase64, pineContext);
+
   await supabase.from("analysis_telemetry").insert({
-    post_id: postId,
-    symbol,
-    timeframe,
-    arrow_level: arrowLevel,
+    post_id: postId, symbol, timeframe, arrow_level: arrowLevel,
     status: result.ok ? "success" : "failed",
     attempts: result.attempts,
     retry_reasons: result.retry_reasons,
@@ -455,34 +513,22 @@ Deno.serve(async (req) => {
   });
 
   if (!result.ok) {
-    await supabase
-      .from("analysis_posts")
+    await supabase.from("analysis_posts")
       .update({ analysis_status: "failed", fail_reason: result.fail_reason })
       .eq("id", postId);
-
     return new Response(JSON.stringify({
-      ok: false,
-      post_id: postId,
-      attempts: result.attempts,
-      fail_reason: result.fail_reason,
-      retry_reasons: result.retry_reasons
+      ok: false, post_id: postId, attempts: result.attempts,
+      fail_reason: result.fail_reason, retry_reasons: result.retry_reasons
     }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
-  await supabase
-    .from("analysis_posts")
-    .update({
-      analysis_json: result.json,
-      analysis_status: "ready",
-      generated_at: new Date().toISOString()
-    })
+  await supabase.from("analysis_posts")
+    .update({ analysis_json: result.json, analysis_status: "ready", generated_at: new Date().toISOString() })
     .eq("id", postId);
 
   return new Response(JSON.stringify({
-    ok: true,
-    post_id: postId,
-    attempts: result.attempts,
-    analysis: result.json
+    ok: true, post_id: postId, attempts: result.attempts,
+    chart_image_url: chartPublicUrl, analysis: result.json
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 });
 
@@ -490,7 +536,6 @@ Deno.serve(async (req) => {
 
 function sessionLabelFromTime(iso?: string): string {
   const d = iso ? new Date(iso) : new Date();
-  // Convert to BKK (UTC+7)
   const bkkHour = (d.getUTCHours() + 7) % 24;
   if (bkkHour >= 5 && bkkHour < 12) return "ช่วงเช้า";
   if (bkkHour >= 12 && bkkHour < 18) return "ช่วงบ่าย";
