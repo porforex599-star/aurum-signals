@@ -363,7 +363,15 @@ Deno.serve(async (req) => {
   if (!anthropicKey || !chartImgKey || !layoutId || !supabaseUrl || !supabaseKey) {
     return new Response(JSON.stringify({
       error: "missing_env",
-      need: ["ANTHROPIC_API_KEY", "CHART_IMG_API_KEY", "CHART_IMG_LAYOUT_ID", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]
+      need: ["ANTHROPIC_API_KEY", "CHART_IMG_API_KEY", "CHART_IMG_LAYOUT_ID", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+      // presence-only diagnostic (no secret values leaked)
+      present: {
+        ANTHROPIC_API_KEY: !!anthropicKey,
+        CHART_IMG_API_KEY: !!chartImgKey,
+        CHART_IMG_LAYOUT_ID: !!layoutId,
+        SUPABASE_URL: !!supabaseUrl,
+        SUPABASE_SERVICE_ROLE_KEY: !!supabaseKey
+      }
     }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
